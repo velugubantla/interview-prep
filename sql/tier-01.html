@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL tier 01 — Retrieval</title>
+<style>
+  :root{
+    --paper:#FBFAF6; --panel:#FFFFFF; --card:#FFFFFF;
+    --ink:#16181C; --muted:#5A6068; --rule:#C3CFD8; --rule2:#D8E4EC;
+    --keep:#2C6E49; --keepbg:#E6F1EA;
+    --drop:#9B3226; --dropbg:#F7E9E7;
+    --mark:#9A6A05; --markbg:#FBF1DC;
+    --hl:#E8F0F6; --numlit:#1F4E79; --trapline:#E5C4BC;
+    --navbg:rgba(251,250,246,.94);
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#12151A; --panel:#171B21; --card:#1C232B;
+      --ink:#E8EAED; --muted:#9BA3AC; --rule:#2A333D; --rule2:#1E252D;
+      --keep:#7FBF9A; --keepbg:#122019;
+      --drop:#D98A7E; --dropbg:#241512;
+      --mark:#D9A441; --markbg:#241D0F;
+      --hl:#16232F; --numlit:#79ACD6; --trapline:#57302A;
+      --navbg:rgba(18,21,26,.94);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:88px}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---- masthead ---- */
+  .mast{padding:56px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;gap:12px;align-items:center;margin:0 0 18px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.8rem,4.4vw,2.8rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.015em}
+  .standfirst{max-width:62ch;color:var(--muted);font-size:1.02rem;margin:0 0 6px}
+  .standfirst strong{color:var(--ink);font-weight:600}
+
+  /* ---- sticky nav ---- */
+  .nav{position:sticky;top:0;z-index:50;background:var(--navbg);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);margin-top:36px}
+  .nav-in{max-width:1080px;margin:0 auto;padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .nav button{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;background:transparent;color:var(--muted);border:1px solid var(--rule);padding:4px 8px;border-radius:2px;transition:.15s;cursor:pointer}
+  .nav button:hover{color:var(--ink);border-color:var(--ink)}
+  .score{margin-left:auto;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .score b{color:var(--keep)}
+
+  /* ---- execution engine ---- */
+  .engine{margin:40px 0 60px;border:1px solid var(--rule);background:var(--panel);border-radius:2px;overflow:hidden}
+  .engine-head{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}
+  .engine-head h2{font-family:var(--mono);font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;margin:0;font-weight:700}
+  .engine-head p{margin:0;font-size:.84rem;color:var(--muted);max-width:52ch}
+  .stages{display:flex;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  .stage{font-family:var(--mono);font-size:.72rem;border:1px solid var(--rule);background:transparent;color:var(--muted);padding:6px 10px;margin:3px 6px 3px 0;cursor:pointer;border-radius:2px;transition:.18s}
+  .stage:hover{border-color:var(--ink);color:var(--ink)}
+  .stage[aria-current="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .stage .n{opacity:.55;margin-right:6px}
+  .engine-body{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+  .pane{padding:20px}
+  .pane+.pane{border-left:1px solid var(--rule)}
+  .pane-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .rowcount{float:right;text-transform:uppercase}
+  .sqlblock{font-family:var(--mono);font-size:.86rem;line-height:1.9;margin:0}
+  .sqlblock .line{padding:1px 8px;border-left:2px solid transparent;transition:.2s;opacity:.42}
+  .sqlblock .line.active{background:var(--hl);border-left-color:var(--mark);opacity:1}
+  .sqlblock .line.done{opacity:.72}
+  .note{margin:20px 0 0;font-size:.86rem;color:var(--muted);min-height:6.2em}
+  .note b{color:var(--ink)}
+  .grid{display:flex;flex-direction:column;gap:3px;min-height:330px}
+  .r{display:grid;grid-template-columns:2.2rem 1fr 4.6rem 5rem;gap:8px;align-items:center;font-family:var(--mono);font-size:.78rem;padding:4px 8px;background:var(--card);border:1px solid var(--rule);border-radius:2px;transition:opacity .35s,transform .35s,background .3s,border-color .3s}
+  .r .id{color:var(--muted);font-size:.7rem}
+  .r .amt{text-align:right}
+  .r .st{color:var(--muted);font-size:.72rem}
+  .r.dropping{background:var(--dropbg);border-color:var(--drop);color:var(--drop);text-decoration:line-through;opacity:.8}
+  .r.entering{opacity:0;transform:translateY(-6px)}
+  .r.agg{background:var(--keepbg);border-color:var(--keep)}
+  .r.agg .amt{color:var(--keep);font-weight:600}
+  .controls{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--rule);flex-wrap:wrap}
+
+  /* ---- shared control buttons ---- */
+  .ctl{font-family:var(--mono);font-size:.73rem;letter-spacing:.05em;background:var(--ink);color:var(--panel);border:1px solid var(--ink);padding:7px 14px;cursor:pointer;border-radius:2px;transition:.18s}
+  .ctl.ghost{background:transparent;color:var(--ink)}
+  .ctl:hover{opacity:.82}
+  .ctl:disabled{opacity:.32;cursor:default}
+  .ctl.on{background:var(--ink);color:var(--panel)}
+  .ctl.off{background:transparent;color:var(--muted);border-color:var(--rule)}
+  .ctl.off:hover{color:var(--ink);border-color:var(--ink)}
+  :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+
+  /* ---- tier sections ---- */
+  .tier{border-top:1px solid var(--rule)}
+  .tier-btn{width:100%;display:grid;grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1.1fr) 1.4rem;gap:16px;align-items:baseline;text-align:left;background:none;border:none;cursor:pointer;padding:22px 4px;font-family:inherit;color:inherit}
+  .tier-btn:hover .tier-name{text-decoration:underline;text-underline-offset:3px}
+  .tier-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .tier-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+  .tier-sub{font-size:.86rem;color:var(--muted)}
+  .chev{font-family:var(--mono);color:var(--muted);transition:transform .2s;justify-self:end}
+  .tier[data-open="true"] .chev{transform:rotate(90deg)}
+  .tier-body{display:none;padding:0 0 40px}
+  .tier[data-open="true"] .tier-body{display:block}
+  .tier-intro{max-width:66ch;font-size:.95rem;color:var(--muted);margin:0 0 28px;padding-left:calc(3.4rem + 16px)}
+  .tier-intro b{color:var(--ink)}
+
+  /* ---- concept cards ---- */
+  .concept{display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:16px;margin-bottom:26px}
+  .c-mark{font-family:var(--mono);font-size:.68rem;color:var(--muted);padding-top:.35em;letter-spacing:.06em}
+  .c-body{min-width:0}
+  .c-title{font-family:var(--mono);font-size:.92rem;font-weight:700;margin:0 0 6px}
+  .c-text{margin:0 0 12px;font-size:.93rem;max-width:64ch}
+  .c-text code{font-family:var(--mono);font-size:.85em;background:var(--hl);padding:1px 4px;border-radius:2px}
+  pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:var(--card);border:1px solid var(--rule);border-left:2px solid var(--ink);padding:12px 14px;overflow-x:auto;margin:0 0 12px;border-radius:2px}
+  .trap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:.87rem;background:var(--dropbg);border:1px solid var(--trapline);border-radius:2px;padding:10px 12px;margin:0 0 12px;max-width:66ch}
+  .trap .lbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--drop);padding-top:.3em}
+  .trap p{margin:0}
+  .kw{color:var(--drop);font-weight:600}
+  .fn{color:var(--keep);font-weight:600}
+  .str{color:var(--mark)}
+  .num{color:var(--numlit)}
+  .cm{color:var(--muted);font-style:italic}
+
+  /* ---- demo shell ---- */
+  .demo{border:1px solid var(--rule);background:var(--panel);border-radius:2px;margin:0 0 16px;overflow:hidden}
+  .demo-head{padding:12px 16px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .demo-head h4{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin:0}
+  .demo-head p{margin:0;font-size:.8rem;color:var(--muted);flex:1;min-width:14ch}
+  .demo-bar{padding:12px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--rule2)}
+  .demo-bar .lab{font-family:var(--mono);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:4px}
+  .demo-main{padding:16px;display:grid;gap:16px}
+  .demo-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .demo-out{font-size:.86rem;color:var(--muted);padding:12px 16px;border-top:1px solid var(--rule2);min-height:3.2em}
+  .demo-out b{color:var(--ink)}
+  .demo-out .verdict{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-right:8px}
+  .v-ok{background:var(--keepbg);color:var(--keep)}
+  .v-bad{background:var(--dropbg);color:var(--drop)}
+  .v-warn{background:var(--markbg);color:var(--mark)}
+
+  /* ---- mini tables ---- */
+  table.t{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;background:var(--card)}
+  table.t th{text-align:left;font-weight:600;color:var(--muted);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--rule)}
+  table.t td{padding:5px 8px;border-bottom:1px solid var(--rule2);transition:background .3s,color .3s,opacity .3s}
+  table.t tr:last-child td{border-bottom:none}
+  table.t tr.keep td{background:var(--keepbg)}
+  table.t tr.drop td{background:var(--dropbg);color:var(--drop);opacity:.75}
+  table.t tr.dim td{opacity:.34}
+  table.t tr.hot td{background:var(--markbg)}
+  table.t tr.win td{background:var(--keepbg);box-shadow:inset 2px 0 0 var(--keep)}
+  table.t tr.cur td{background:var(--markbg);box-shadow:inset 2px 0 0 var(--mark);font-weight:600}
+  table.t tr.enter td{opacity:0}
+  table.t td.num{text-align:right}
+  .tcap{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .tbox{border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+
+  /* ---- grid canvas (index demo) ---- */
+  .cells{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--rule2);border-radius:1px;transition:background .12s,border-color .12s}
+  .cell.read{background:var(--markbg);border-color:var(--mark)}
+  .cell.hit{background:var(--keep);border-color:var(--keep)}
+
+  /* ---- tree (recursive demo) ---- */
+  .tree{display:flex;flex-direction:column;gap:10px}
+  .lvl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .lvl .lname{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);width:5.4rem;flex-shrink:0}
+  .node{font-family:var(--mono);font-size:.74rem;border:1px solid var(--rule);background:var(--card);color:var(--muted);padding:4px 9px;border-radius:2px;transition:.3s;opacity:.45}
+  .node.on{opacity:1;background:var(--keepbg);border-color:var(--keep);color:var(--keep);font-weight:600}
+  .node.new{background:var(--markbg);border-color:var(--mark);color:var(--mark);opacity:1;font-weight:600}
+
+  /* ---- sessions (txn demo) ---- */
+  .sessions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sess{border:1px solid var(--rule);border-radius:2px;background:var(--card);overflow:hidden}
+  .sess h5{margin:0;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--rule2);color:var(--muted)}
+  .sess ol{margin:0;padding:8px 10px 10px 26px;font-family:var(--mono);font-size:.75rem;line-height:1.8}
+  .sess li{color:var(--muted);opacity:.4;transition:.25s;padding-left:2px}
+  .sess li.on{opacity:1;color:var(--ink)}
+  .sess li.now{opacity:1;color:var(--ink);background:var(--markbg)}
+  .balance{font-family:var(--mono);font-size:.8rem;text-align:center;padding:10px;border:1px solid var(--rule);background:var(--card);border-radius:2px}
+  .balance b{font-size:1.4rem;display:block;margin-top:2px}
+
+  /* ---- quiz ---- */
+  .quiz{margin-top:34px;padding-left:calc(3.4rem + 16px)}
+  .quiz-h{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;display:flex;gap:10px;align-items:center}
+  .quiz-h::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .q{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:16px;margin-bottom:12px}
+  .q-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;color:var(--muted)}
+  .q-text{margin:6px 0 12px;font-size:.93rem;max-width:66ch}
+  .q pre.code{background:var(--panel)}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.88rem;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:9px 12px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:flex-start}
+  .opt:hover{border-color:var(--ink)}
+  .opt .tick{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex-shrink:0;padding-top:.1em}
+  .opt.right{background:var(--keepbg);border-color:var(--keep)}
+  .opt.right .tick{color:var(--keep)}
+  .opt.wrong{background:var(--dropbg);border-color:var(--drop)}
+  .opt.wrong .tick{color:var(--drop)}
+  .opt.locked{cursor:default}
+  .why{margin:12px 0 0;font-size:.87rem;color:var(--muted);border-left:2px solid var(--mark);padding-left:12px;display:none}
+  .why.show{display:block}
+  .why b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--rule);margin-top:20px;padding:32px 0 90px;font-size:.86rem;color:var(--muted);max-width:66ch}
+  footer b{color:var(--ink)}
+
+  @media (max-width:860px){
+    .engine-body,.demo-2col,.sessions{grid-template-columns:1fr}
+    .pane+.pane{border-left:none;border-top:1px solid var(--rule)}
+    .tier-btn{grid-template-columns:2.6rem minmax(0,1fr) 1.2rem}
+    .tier-sub{display:none}
+    .tier-intro,.quiz{padding-left:0}
+    .concept{grid-template-columns:1fr;gap:4px}
+    .cells{grid-template-columns:repeat(8,1fr)}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+
+  .backlink{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--muted);text-decoration:none;border:1px solid var(--rule);padding:5px 10px;border-radius:2px;display:inline-block;transition:.15s}
+  .backlink:hover{color:var(--ink);border-color:var(--ink)}
+  .pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--rule);margin-top:24px;padding:24px 0 90px}
+  .pager a{font-family:var(--mono);font-size:.75rem;color:var(--ink);text-decoration:none;border:1px solid var(--rule);padding:8px 14px;border-radius:2px;transition:.15s}
+  .pager a:hover{border-color:var(--ink);background:var(--panel)}
+  .pager .sp{flex:1}
+  .cards{border-top:1px solid var(--rule);margin-top:8px}
+  .card{display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:16px;align-items:baseline;
+        padding:20px 4px;border-bottom:1px solid var(--rule);text-decoration:none;color:inherit;transition:.15s}
+  .card:hover{background:var(--panel)}
+  .card:hover .card-name{text-decoration:underline;text-underline-offset:3px}
+  .card-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .card-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em;display:block}
+  .card-sub{font-size:.87rem;color:var(--muted);display:block;margin-top:2px}
+  .card-meta{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--muted);text-align:right;white-space:nowrap}
+  @media (max-width:860px){ .card{grid-template-columns:2.6rem minmax(0,1fr)} .card-meta{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap mast">
+  <p class="eyebrow"><a class="backlink" href="../index.html">&larr; Interview Prep home</a> <a class="backlink" href="index.html">&larr; all tiers</a></p>
+  <h1><span style="color:var(--muted)">01</span><br>Retrieval</h1>
+  <p class="standfirst">One table, correctly &mdash; 7 concepts, 1 demo(s), 4 problems.
+     <span class="score" id="scorebox" style="margin-left:0"></span></p>
+</div>
+<div class="wrap"><div id="main"></div></div>
+<div class="wrap"><div class="pager"><a href="tier-00.html">&larr; 00 &nbsp;Mental models</a><span class="sp"></span><a href="tier-02.html">02 &nbsp;Aggregation &rarr;</a></div></div>
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const KW = new Set(('select from where group by having order limit offset join left right full inner outer cross on as and or not in is null distinct union all intersect except with recursive case when then else end over partition rows range groups between preceding following unbounded current row insert into values update set delete create table view materialized index merge using matched conflict do nothing returning begin commit rollback lateral exists asc desc fetch next only qualify filter grouping sets rollup cube explain analyze primary key foreign references unique check constraint default cast interval date timestamp timestamptz if for of level isolation read committed repeatable serializable unnest apply top nulls first last ilike like window add column temporary drop alter serial int text boolean numeric true false unknown').split(' '));
+const FNS = new Set(('sum count avg min max coalesce nullif row_number rank dense_rank ntile lag lead first_value last_value date_trunc extract array_agg string_agg listagg generate_series abs round concat greatest least now current_date current_timestamp length upper lower trim').split(' '));
+
+function hl(sql){
+  const re = /(--[^\n]*)|('(?:''|[^'])*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([\s\S])/g;
+  let out = '', m;
+  while ((m = re.exec(sql)) !== null){
+    if (m[1]) out += '<span class="cm">'+esc(m[1])+'</span>';
+    else if (m[2]) out += '<span class="str">'+esc(m[2])+'</span>';
+    else if (m[3]) out += '<span class="num">'+m[3]+'</span>';
+    else if (m[4]){
+      const w = m[4], lw = w.toLowerCase();
+      if (KW.has(lw)) out += '<span class="kw">'+esc(w)+'</span>';
+      else if (FNS.has(lw)) out += '<span class="fn">'+esc(w)+'</span>';
+      else out += esc(w);
+    }
+    else out += esc(m[5]);
+  }
+  return out;
+}
+const code = sql => '<pre class="code">'+hl(sql)+'</pre>';
+
+/* mini table renderer. rows = [{cells:[...], cls:'keep|drop|dim|hot|win|cur'}] */
+function tbl(cols, rows, caption){
+  let h = '';
+  if (caption) h += '<p class="tcap">'+esc(caption)+'</p>';
+  h += '<div class="tbox"><table class="t"><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+'</th>');
+  h += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    h += '<tr class="'+(r.cls||'')+'">';
+    r.cells.forEach((c,i) => {
+      const isNum = typeof c === 'number';
+      h += '<td class="'+(isNum?'num':'')+'">'+(c===null?'<span class="cm">NULL</span>':esc(c))+'</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+function btnRow(label, items, onPick, startIdx){
+  const wrap = document.createElement('div');
+  wrap.className = 'demo-bar';
+  if (label) wrap.innerHTML = '<span class="lab">'+esc(label)+'</span>';
+  const btns = items.map((it,i) => {
+    const b = document.createElement('button');
+    b.className = 'ctl ' + (i===startIdx ? 'on':'off');
+    b.textContent = it;
+    b.onclick = () => { btns.forEach((x,j)=> x.className='ctl '+(j===i?'on':'off')); onPick(i); };
+    wrap.appendChild(b);
+    return b;
+  });
+  return wrap;
+}
+
+/* ============================================================
+   DEMO FRAMEWORK
+   ============================================================ */
+function demoShell(host, title, blurb){
+  host.className = 'demo';
+  host.innerHTML = '<div class="demo-head"><h4>'+esc(title)+'</h4><p>'+blurb+'</p></div>'
+    + '<div class="bars"></div><div class="demo-main"></div><div class="demo-out"></div>';
+  return {bars:host.querySelector('.bars'), main:host.querySelector('.demo-main'), out:host.querySelector('.demo-out')};
+}
+const V = (k,t) => '<span class="verdict v-'+k+'">'+t+'</span>';
+const DEMOS = {};
+/* ---------- 2. BETWEEN on timestamps ---------- */
+DEMOS.between_trap = {
+  title:'The half-open interval', blurb:'BETWEEN is inclusive on both ends — which is exactly the problem with timestamps.',
+  build(host){
+    const s = demoShell(host,this.title,this.blurb);
+    const rows=[[1,'2024-01-01 09:00',120],[2,'2024-01-15 11:30',300],[3,'2024-01-31 00:00',80],
+                [4,'2024-01-31 14:20',450],[5,'2024-02-01 08:05',90]];
+    const preds=[
+      {sql:"created_at BETWEEN '2024-01-01' AND '2024-01-31'", f:t=>t<='2024-01-31 00:00'},
+      {sql:"created_at >= '2024-01-01' AND created_at < '2024-02-01'", f:t=>t<'2024-02-01 00:00'}
+    ];
+    let cur=0;
+    const draw=()=>{
+      const p=preds[cur];
+      const body=rows.map(([id,t,a])=>({cells:[id,t,a], cls:p.f(t)?'keep':'drop'}));
+      const kept=body.filter(b=>b.cls==='keep');
+      const sum=kept.reduce((n,b)=>n+b.cells[2],0);
+      s.main.innerHTML=code('SELECT SUM(amount) FROM orders\nWHERE '+p.sql+';')+tbl(['id','created_at','amount'],body);
+      s.out.innerHTML=(cur===0?V('bad','SUM = '+sum):V('ok','SUM = '+sum))
+        +(cur===0?'Row 4 is a January order and it is missing. <b>2024-01-31</b> parses as midnight, so anything later that day falls outside. January revenue is understated by 450 and the query still succeeds.'
+                 :'Half-open ranges — greater-or-equal on the start, strictly-less on the next boundary — are correct for every grain: seconds, days, months. Make it a reflex.');
+    };
+    s.bars.appendChild(btnRow('Range style',['BETWEEN (closed)','>= … < (half-open)'],i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+const TIER = {"n": "01", "name": "Retrieval", "sub": "One table, correctly", "intro": "The unglamorous tier. Its failure mode is not \"the query errors\" \u2014 it is <b>off-by-a-boundary</b>: a day of data missing, an integer division truncating, a sort that puts NULLs somewhere you did not expect.", "concepts": [{"t": "Predicates and their edges", "b": "<code>IN</code> is shorthand for chained ORs. <code>BETWEEN</code> is inclusive on <b>both</b> ends. <code>LIKE</code> uses <code>%</code> (any run) and <code>_</code> (one character); a leading <code>%</code> means no index can help. Case sensitivity of <code>LIKE</code> is dialect-dependent \u2014 Postgres has <code>ILIKE</code>, others rely on collation.", "sql": "WHERE status IN ('paid','settled')      -- = OR\nWHERE amount BETWEEN 100 AND 200        -- includes 100 and 200\nWHERE name LIKE 'Sm%'                   -- index-friendly\nWHERE name LIKE '%son'                  -- full scan"}, {"t": "Ranges over timestamps", "b": "A date literal compared to a timestamp column becomes midnight. Closed ranges therefore lose the final day. Use half-open ranges everywhere: <code>>= start AND < next_boundary</code>. This is correct at every grain and needs no thought about precision.", "demo": "between_trap"}, {"t": "ORDER BY, and where NULLs land", "b": "Sort by several keys, each with its own direction. NULL ordering is <b>not</b> standard across engines: Postgres treats NULL as largest (so first on DESC), while SQL Server and MySQL treat it as smallest. Be explicit with <code>NULLS LAST</code> where supported, or sort on a computed flag where it is not.", "sql": "ORDER BY region ASC, revenue DESC NULLS LAST, id ASC", "trap": "Add a final unique tiebreaker (usually the primary key) to any ORDER BY used for pagination. Without it, two rows with equal sort keys can swap between pages and a row is shown twice while another is never shown at all."}, {"t": "LIMIT, OFFSET, and why pagination rots", "b": "<code>OFFSET 100000</code> does not skip work \u2014 the engine still produces and discards 100,000 rows. Page load time grows linearly with page number. The fix is <b>keyset pagination</b>: remember the last row's sort key and ask for rows after it.", "sql": "-- degrades with depth\nSELECT * FROM orders ORDER BY id LIMIT 20 OFFSET 100000;\n\n-- constant time at any depth\nSELECT * FROM orders WHERE id > :last_seen_id ORDER BY id LIMIT 20;"}, {"t": "CASE expressions", "b": "<code>CASE</code> is an expression, so it works anywhere a value works: in SELECT, in ORDER BY, inside an aggregate, in a GROUP BY. It stops at the first matching WHEN. An omitted ELSE returns NULL \u2014 which is a frequent accidental source of the NULL problems from tier 00.", "sql": "SELECT CASE WHEN amount >= 1000 THEN 'large'\n            WHEN amount >= 100  THEN 'medium'\n            ELSE 'small' END AS band,\n       COUNT(*)\nFROM orders GROUP BY 1;"}, {"t": "Types and implicit conversion", "b": "Integer division truncates: <code>5/2</code> is 2, not 2.5. Comparing a number to a string may silently cast one side, and once a column is cast, its index is unusable. String comparison is lexicographic, so <code>'10' < '9'</code> is true.", "sql": "SELECT 5 / 2;                    -- 2\nSELECT 5.0 / 2;                 -- 2.5\nSELECT COUNT(*) * 1.0 / NULLIF(total, 0);  -- safe ratio"}, {"t": "DISTINCT: legitimate use vs symptom", "b": "Legitimate when the source genuinely contains duplicates you want collapsed. A symptom when it was added because a join started producing repeats \u2014 that is fan-out, and DISTINCT hides the duplication without fixing the arithmetic underneath. If removing DISTINCT changes your row count, you have a grain problem to diagnose, not a keyword to add."}], "quiz": [{"q": "Orders exist at 2024-01-31 14:20. Which predicate includes them in January?", "opts": ["created_at BETWEEN '2024-01-01' AND '2024-01-31'", "created_at >= '2024-01-01' AND created_at < '2024-02-01'", "DATE(created_at) BETWEEN '2024-01-01' AND '2024-01-31'", "Both B and C return the right rows"], "a": 3, "why": "B and C both include the row. But C wraps the column in a function, so it cannot use an index on <code>created_at</code> \u2014 correct answer, bad plan. B is correct <i>and</i> sargable, which is why half-open ranges are the standard idiom."}, {"q": "<code>total_orders</code> and <code>total_customers</code> are both integer columns. What does <code>SELECT total_orders / total_customers</code> return when the values are 7 and 2?", "opts": ["3.5", "3", "4", "An error"], "a": 1, "why": "Integer division truncates toward zero. Multiply one side by 1.0, or cast, before dividing. And wrap the divisor in <code>NULLIF(x, 0)</code> unless you enjoy division-by-zero pages at 3am."}, {"q": "A dashboard paginates with <code>ORDER BY created_at DESC LIMIT 20 OFFSET n</code>. Users report seeing the same record on two different pages. Most likely cause?", "opts": ["A caching bug in the front end", "Ties in created_at with no unique tiebreaker in the ORDER BY", "OFFSET is zero-indexed", "The index on created_at is fragmented"], "a": 1, "why": "When sort keys tie, the relative order of tied rows is undefined and can differ between the two queries that produce page 1 and page 2. Append a unique column: <code>ORDER BY created_at DESC, id DESC</code>. The same fix makes keyset pagination possible."}, {"q": "Why does page 5000 of an OFFSET-based list load far slower than page 1?", "opts": ["The index degrades at depth", "The engine still produces and discards every row before the offset", "Later rows are physically further away on disk", "It does not \u2014 that is a client-side issue"], "a": 1, "why": "OFFSET is applied last, after the rows have been generated and sorted. Cost is proportional to offset + limit. Keyset pagination turns it into a range seek that costs the same at any depth."}]};
+/* ============================================================
+   SINGLE-TIER PAGE RENDERER
+   ============================================================ */
+(function(){
+  const t = TIER;
+  const main = document.getElementById('main');
+  let solved = 0;
+
+  let body = '<p class="tier-intro">'+t.intro+'</p>';
+  t.concepts.forEach((c,ci)=>{
+    body += '<div class="concept"><div class="c-mark">'+t.n+'.'+String(ci+1).padStart(2,'0')+'</div><div class="c-body">'
+      + '<p class="c-title">'+esc(c.t)+'</p><p class="c-text">'+c.b+'</p>'
+      + (c.sql ? code(c.sql) : '')
+      + (c.trap ? '<div class="trap"><span class="lbl">trap</span><p>'+c.trap+'</p></div>' : '')
+      + (c.demo ? '<div class="demo" data-demo="'+c.demo+'"></div>' : '')
+      + '</div></div>';
+  });
+
+  body += '<div class="quiz"><p class="quiz-h">Problems · tier '+t.n+'</p>';
+  t.quiz.forEach((q,qi)=>{
+    body += '<div class="q" data-q="'+qi+'">'
+      + '<p class="q-num">'+t.n+' · problem '+(qi+1)+'</p>'
+      + '<p class="q-text">'+q.q+'</p>'
+      + (q.sql ? code(q.sql) : '')
+      + '<div class="opts">'
+      + q.opts.map((o,oi)=>'<button class="opt" data-o="'+oi+'"><span class="tick">'+String.fromCharCode(65+oi)+'</span><span>'+o+'</span></button>').join('')
+      + '</div><p class="why"></p></div>';
+  });
+  body += '</div>';
+  main.innerHTML = body;
+
+  main.querySelectorAll('[data-demo]').forEach(host=>{
+    const d = DEMOS[host.dataset.demo];
+    if(!d) return;
+    try { d.build(host); }
+    catch(e){ host.innerHTML = '<div class="demo-out">This demo failed to load.</div>'; }
+  });
+
+  const sc = document.getElementById('scorebox');
+  const setScore = () => { sc.innerHTML = 'solved <b>'+solved+'</b> / '+t.quiz.length; };
+  setScore();
+
+  main.addEventListener('click', ev=>{
+    const opt = ev.target.closest('.opt'); if(!opt) return;
+    const qEl = opt.closest('.q'); if(qEl.dataset.done) return;
+    const q = t.quiz[+qEl.dataset.q], picked = +opt.dataset.o;
+    qEl.dataset.done = '1';
+    qEl.querySelectorAll('.opt').forEach((b,i)=>{
+      b.classList.add('locked');
+      if(i===q.a) b.classList.add('right');
+      else if(i===picked) b.classList.add('wrong');
+      b.querySelector('.tick').textContent = i===q.a ? '✓' : (i===picked ? '✕' : String.fromCharCode(65+i));
+    });
+    const why = qEl.querySelector('.why');
+    why.innerHTML = (picked===q.a ? '<b>Correct.</b> ' : '<b>Not quite.</b> ') + q.why;
+    why.classList.add('show');
+    if(picked===q.a){ solved++; setScore(); }
+  });
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design interview — visual wall chart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:10px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+h2{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:500;margin:44px 0 16px;padding-bottom:6px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline}
+h2 span{font-size:11px;color:var(--ink-3);letter-spacing:.08em}
+.lede{color:var(--ink-2);font-size:14px;margin:-6px 0 18px}
+
+/* master progress */
+.master{display:flex;align-items:center;gap:16px;margin:18px 0 4px}
+.mbar{flex:1;height:6px;background:var(--rule);border-radius:3px;overflow:hidden}
+.mfill{height:100%;width:0;background:var(--green);transition:width .35s}
+.mpct{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;min-width:112px;text-align:right;color:var(--ink-2)}
+.reset{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:none;
+  border:1px solid var(--rule);color:var(--ink-3);padding:5px 10px;cursor:pointer;border-radius:2px}
+.reset:hover{color:var(--ink);border-color:var(--ink-3)}
+
+/* clock */
+.clock{display:flex;width:100%;height:64px;border:1px solid var(--rule);overflow:hidden}
+.seg{border-right:1px solid var(--rule);background:var(--panel);cursor:pointer;color:var(--ink);padding:9px 8px;
+  display:flex;flex-direction:column;justify-content:space-between;transition:background .2s;min-width:0}
+.seg:last-child{border-right:none}
+.seg:hover{background:var(--blue-wash)}
+.seg.on{background:var(--blue);color:#fff}
+.seg .mm{font-family:"IBM Plex Mono",monospace;font-size:11px;opacity:.7}
+.seg .nm{font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg:focus-visible{outline:2px solid var(--amber);outline-offset:-3px}
+.clockdesc{border-left:3px solid var(--blue);background:var(--blue-wash);padding:14px 18px;margin-top:14px;min-height:78px}
+.clockdesc .t{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.clockdesc p{margin:0;font-size:14.5px}
+
+/* rubric */
+.rub{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.rub .col{background:var(--panel);padding:16px 18px}
+.rub .lv{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600}
+.rub .gr{font-size:12px;color:var(--ink-2);margin:2px 0 10px;letter-spacing:.04em}
+.rub ul{margin:0;padding-left:16px;font-size:13.5px;color:var(--ink-2)}
+.rub li{margin-bottom:5px}
+.rub .col.you{background:var(--amber-wash)}
+.rub .col.you .lv{color:var(--amber)}
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;background:var(--amber);color:#fff;padding:2px 6px;margin-left:6px;vertical-align:2px}
+
+/* concept cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.card{background:var(--panel);padding:14px 16px 16px}
+.card h3{font-size:14px;font-weight:600;margin:0 0 3px;display:flex;justify-content:space-between;align-items:baseline}
+.card h3 em{font-family:"IBM Plex Mono",monospace;font-size:11px;font-style:normal;color:var(--ink-3);font-weight:400}
+.card .bar{height:3px;background:var(--rule);margin:0 0 10px}
+.card .bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .3s}
+.card label{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);padding:3px 0;cursor:pointer;line-height:1.45}
+.card label:hover{color:var(--ink)}
+.card input{margin:5px 0 0;accent-color:var(--green);flex-shrink:0}
+.card input:checked+span{color:var(--ink-3);text-decoration:line-through}
+
+/* problems */
+.pfam{margin-bottom:14px}
+.pfam .fh{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{border:1px solid var(--rule);background:var(--panel);padding:7px 12px;font-size:13px;cursor:pointer;color:var(--ink);
+  border-radius:2px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.pill:hover{border-color:var(--blue)}
+.pill.done{background:var(--green-wash);border-color:var(--green);color:var(--green)}
+.pill em{font-style:normal;font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.pill.done em{color:var(--green);opacity:.8}
+
+/* tradeoffs */
+.tt{width:100%;border-collapse:collapse;font-size:13.5px}
+.tt th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;text-align:left;padding:0 10px 7px 0;border-bottom:1px solid var(--rule)}
+.tt td{padding:8px 10px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.tt td:first-child{font-weight:500;white-space:nowrap}
+.tt td:nth-child(2){color:var(--blue)}
+.tt td:nth-child(3){color:var(--amber)}
+
+/* timeline */
+.tl{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.tl .m{background:var(--panel);padding:13px 14px}
+.tl .m.key{background:var(--amber-wash)}
+.tl .mo{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-3)}
+.tl .ti{font-size:13.5px;font-weight:600;margin:3px 0 5px}
+.tl .m.key .ti{color:var(--amber)}
+.tl .de{font-size:12px;color:var(--ink-2);line-height:1.45}
+
+/* rules */
+.rules{counter-reset:r;list-style:none;padding:0;margin:0;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px}
+.rules li{counter-increment:r;padding:8px 0 8px 34px;position:relative;font-size:14px;border-bottom:1px solid var(--rule)}
+.rules li::before{content:counter(r,decimal-leading-zero);position:absolute;left:0;top:9px;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--blue);font-weight:600}
+footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+@media (max-width:760px){
+  .rub{grid-template-columns:1fr}
+  .tl{grid-template-columns:repeat(2,1fr)}
+  .clock{height:auto;flex-wrap:wrap}
+  .seg{flex:1 1 33%;min-width:110px;border-bottom:1px solid var(--rule)}
+}
+@media print{body{background:#fff}.reset{display:none}}
+</style>
+</head>
+<body>
+<div class="sheet">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+
+<header>
+  <div class="eyebrow">FAANG-tier loops / senior roles / phased plan</div>
+  <h1>System design wall chart</h1>
+  <p class="sub">Everything that gets graded, on one page. Check items off as you genuinely own them — not as you read them.</p>
+</header>
+
+<div class="master">
+  <div class="mbar"><div class="mfill" id="mfill"></div></div>
+  <div class="mpct" id="mpct">0 / 0 covered</div>
+  <button class="reset" id="reset">Reset</button>
+</div>
+
+<h2>The 45-minute clock <span>click a phase</span></h2>
+<p class="lede">Widths are proportional to real minutes. The two wide blocks are where the score is won; the narrow ones at the front are where it is most often lost.</p>
+<div class="clock" id="clock"></div>
+<div class="clockdesc"><div class="t" id="cdt">Phase</div><p id="cdp"></p></div>
+
+<h2>What is actually graded <span>the bar moves with level</span></h2>
+<div class="rub">
+  <div class="col">
+    <div class="lv">L5</div>
+    <div class="gr">Graded on coverage</div>
+    <ul><li>Remembered to cache, shard, queue</li><li>Design is complete and correct</li><li>Answers the question asked</li></ul>
+  </div>
+  <div class="col">
+    <div class="lv">L6</div>
+    <div class="gr">Graded on depth and tradeoffs</div>
+    <ul><li>Two or three levels below any box</li><li>Names the alternative unprompted</li><li>Holds a position under pushback</li><li>Knows the failure modes, not just the pattern</li></ul>
+  </div>
+  <div class="col">
+    <div class="lv">L7</div>
+    <div class="gr">Graded on problem framing</div>
+    <ul><li>Challenges the requirement itself</li><li>Discusses org and ownership boundaries</li><li>Asks what exists today and how we migrate</li><li>Build vs buy, and who operates it</li></ul>
+  </div>
+</div>
+
+<h2>Tier 1 — do not skip <span>each one can be a full deep dive</span></h2>
+<div class="cards" id="t1"></div>
+
+<h2>Tier 2 — know one well enough to deep-dive</h2>
+<div class="cards" id="t2"></div>
+
+<h2>Canonical problems <span>study by pattern, not by name</span></h2>
+<p class="lede">Write each one cold on paper in 45 minutes before you read any reference answer. Reading solutions creates false confidence.</p>
+<div id="probs"></div>
+
+<h2>Tradeoffs to rehearse out loud</h2>
+<table class="tt">
+  <tr><th>Decision</th><th>Pick the first when</th><th>Pick the second when</th></tr>
+  <tr><td>SQL / NoSQL</td><td>Relations, transactions, unknown query patterns</td><td>Known access patterns, extreme scale on one axis</td></tr>
+  <tr><td>Normalize / denormalize</td><td>Write-heavy, consistency matters</td><td>Read-heavy, latency matters</td></tr>
+  <tr><td>Sync / async</td><td>Caller needs the result to proceed</td><td>Caller can be told "accepted"</td></tr>
+  <tr><td>Strong / eventual</td><td>Money, inventory, auth</td><td>Feeds, counts, social graphs</td></tr>
+  <tr><td>Fan-out write / read</td><td>Read-heavy, bounded followers</td><td>Write-heavy or celebrity skew — go hybrid</td></tr>
+  <tr><td>Cache-aside / write-through</td><td>Read-heavy, tolerate staleness</td><td>Cache and store must stay coherent</td></tr>
+  <tr><td>Monolith / services</td><td>Small team, boundaries still moving</td><td>Independent scaling <em>and</em> independent teams</td></tr>
+  <tr><td>Push / pull</td><td>Low latency, few consumers</td><td>Many consumers, consumer-paced</td></tr>
+  <tr><td>Single / multi region</td><td>Cost-sensitive, RTO tolerant</td><td>Regulatory or true global latency need</td></tr>
+</table>
+
+<h2>The prep arc <span>phase 5 decides the outcome &middot; one phase &asymp; one month &mdash; pace to your timeline</span></h2>
+<div class="tl">
+  <div class="m"><div class="mo">Phase 1</div><div class="ti">Primitives</div><div class="de">DDIA cover to cover. No mock problems yet.</div></div>
+  <div class="m"><div class="mo">Phase 2</div><div class="ti">Primitives</div><div class="de">DDIA ch. 5–9 twice. Dynamo, Bigtable, Kafka, Raft.</div></div>
+  <div class="m"><div class="mo">Phase 3</div><div class="ti">Framework</div><div class="de">Drill the clock. 20 timed estimation reps.</div></div>
+  <div class="m"><div class="mo">Phase 4</div><div class="ti">Problems</div><div class="de">Five a week, written cold before any reference.</div></div>
+  <div class="m key"><div class="mo">Phase 5</div><div class="ti">Mocks &times;12</div><div class="de">Real engineers. Recorded. The phase people skip.</div></div>
+  <div class="m"><div class="mo">Phase 6</div><div class="ti">Weak spots</div><div class="de">Two weakest Tier-1 areas, plus coding and behavioral.</div></div>
+</div>
+
+<h2>Twenty minutes before the round</h2>
+<ol class="rules">
+  <li>Scope before you design. Get explicit agreement.</li>
+  <li>Say a number in the first eight minutes.</li>
+  <li>Draw the happy path end to end before optimizing anything.</li>
+  <li>Name the alternative and why you rejected it — before being asked.</li>
+  <li>Offer the deep dive: "the two risky parts are X and Y — which?"</li>
+  <li>Say what breaks first and how you would detect it.</li>
+  <li>Say "I don't know," then reason from first principles.</li>
+  <li>Stop talking. Check in. It is a collaboration, not a lecture.</li>
+  <li>Don't over-engineer. "One primary is fine here" is a strong-hire sentence.</li>
+  <li>Close by recapping the two or three decisions that defined the design.</li>
+</ol>
+
+<footer>Progress is saved in this browser only. Print to PDF for a paper copy — the interactive state prints as checked boxes.</footer>
+
+</div>
+
+<script>
+const PHASES=[
+ [5,'Clarify','Functional requirements in three to five bullets, and an explicit list of non-goals. State which non-functional you are optimizing for and get agreement. Designing before this is the single most common senior-level rejection.'],
+ [3,'Quantify','Scale, QPS, storage, latency SLO, consistency requirement. Say the numbers out loud. An interviewer who never hears a number assumes you cannot produce one.'],
+ [4,'API and data model','Three to five endpoints and the core entities. Access patterns drive the store choice — always name the access pattern before naming the database.'],
+ [13,'High-level design','Draw it once, end to end: client, edge, services, storage, async path, analytics. No orphan boxes. Get data flowing through before you optimize any part of it.'],
+ [13,'Deep dive','Let them pick, or offer: "the two risky parts here are X and Y — which do you want?" Offering is a seniority signal. Go two or three levels down and know the failure modes.'],
+ [5,'Failure and ops','What breaks first, how you detect it, how it degrades rather than dies. Blast radius, rollback, and the metric you would page on.'],
+ [2,'Wrap','Recap the two or three decisions that defined the design, and name what you would revisit with more time. Never end by trailing off.']
+];
+const T1=[
+ ['Networking and protocols',['DNS, anycast, GeoDNS','TCP vs UDP, connection cost, keep-alive','TLS handshake cost and termination point','HTTP/1.1 vs 2 vs 3 (QUIC)','gRPC vs REST vs GraphQL','WebSocket vs SSE vs long polling']],
+ ['Load balancing and routing',['L4 vs L7, and when you need L7','RR, least-conn, consistent hash, power-of-two','Health checks, draining, sticky sessions','API gateway responsibilities']],
+ ['Caching',['Placement: client, CDN, edge, app, DB','Cache-aside, read/write-through, write-behind','Eviction: LRU, LFU, TTL, ARC','Stampede, hot key, penetration, cold start','Invalidation strategy']],
+ ['Storage internals',['B-tree vs LSM: read/write amplification','Index design, covering and composite order','Isolation levels and the anomaly each prevents','MVCC and write-ahead log','Store choice driven by access pattern']],
+ ['Replication',['Single-leader, multi-leader, leaderless','Sync vs async lag, read-your-writes','Quorum W + R > N, hinted handoff','Failover, split-brain, fencing tokens','LWW, vector clocks, CRDTs']],
+ ['Partitioning',['Range vs hash vs directory','Consistent hashing with virtual nodes','Hot shard and the celebrity problem','Resharding live: double-write, backfill, cutover','Cross-shard queries and their cost']],
+ ['Consistency and consensus',['CAP stated correctly, and PACELC','The consistency ladder, top to bottom','Raft: election, log replication, commit index','Where consensus really lives: metadata, locks, election','2PC vs saga vs transactional outbox','Idempotency keys and the exactly-once illusion']],
+ ['Messaging and streaming',['Queue vs replayable log','Kafka: partition, offset, consumer group, ordering','At-most / at-least / effectively-once','Backpressure, DLQ, poison message, consumer lag','Fan-out on write vs on read']],
+ ['Resilience',['Timeouts always; retries with backoff and jitter','Circuit breaker, bulkhead, load shedding','Rate limiting: token, leaky, sliding window','Distributed rate limiting','Failure domains, blast radius, cells']]
+];
+const T2=[
+ ['Specialized indexes and structures',['Inverted index, BM25, near-real-time indexing','Geohash, quadtree, S2, R-tree','Bloom filter, HyperLogLog, Count-Min Sketch','Time series: rollups, retention tiers, cardinality']],
+ ['Platform and practice',['Object storage, presigned URLs, multipart, CDN invalidation','CDC, event-time vs processing-time, watermarks','RED / USE metrics, tracing, SLI-SLO-error budget','OAuth2 / OIDC, JWT vs session, secrets, least privilege']],
+ ['ML &amp; AI infrastructure',['Vector indexes: HNSW, IVF, recall vs latency','RAG serving: chunking, retrieval, reranking, caching','Feature store, online/offline skew','Model rollout: shadow, canary, drift detection']]
+];
+const PROBS=[
+ ['Simple, and easy to over-engineer',[['URL shortener','key generation'],['Pastebin','blob + metadata']]],
+ ['Feed and social',[['Twitter feed','fan-out write vs read'],['Instagram','feed + media'],['Notification system','multi-channel fan-out']]],
+ ['Realtime and collaborative',[['WhatsApp','connection state'],['Google Docs','OT vs CRDT'],['Autocomplete','trie + top-K']]],
+ ['Media and storage',[['YouTube','transcode + CDN'],['Dropbox','delta sync, dedupe']]],
+ ['Geospatial',[['Uber matching','geo index + write amp'],['Yelp nearby','geo read-heavy']]],
+ ['Correctness over availability',[['Ticketmaster','inventory contention'],['Payment system','ledger, saga, reconcile']]],
+ ['Ingest and analytics',[['Web crawler','frontier + politeness'],['Ad click aggregation','event-time windows'],['Metrics system','cardinality explosion']]],
+ ['Infrastructure',[['Rate limiter','distributed counters'],['Job scheduler','election + at-least-once'],['ML feature serving','online/offline skew']]]
+];
+
+const KEY='sd-wallchart-v1';
+let state={};
+try{state=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){state={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+const clock=document.getElementById('clock');
+PHASES.forEach((p,i)=>{
+  const b=document.createElement('button');
+  b.className='seg'; b.style.flex=p[0];
+  b.innerHTML='<div class="mm">'+p[0]+' min</div><div class="nm">'+p[1]+'</div>';
+  b.onclick=()=>{
+    document.querySelectorAll('.seg').forEach(s=>s.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById('cdt').textContent=p[1];
+    document.getElementById('cdp').textContent=p[2];
+  };
+  clock.appendChild(b);
+  if(i===0)b.click();
+});
+
+function buildCards(el,data,prefix){
+  data.forEach((grp,gi)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    const items=grp[1].map((t,ii)=>{
+      const id=prefix+'-'+gi+'-'+ii;
+      return '<label><input type="checkbox" data-k="'+id+'"'+(state[id]?' checked':'')+'><span>'+t+'</span></label>';
+    }).join('');
+    card.innerHTML='<h3>'+grp[0]+'<em class="cnt"></em></h3><div class="bar"><i></i></div>'+items;
+    el.appendChild(card);
+  });
+}
+buildCards(document.getElementById('t1'),T1,'t1');
+buildCards(document.getElementById('t2'),T2,'t2');
+
+const pw=document.getElementById('probs');
+PROBS.forEach((fam,fi)=>{
+  const d=document.createElement('div'); d.className='pfam';
+  const pills=fam[1].map((p,pi)=>{
+    const id='p-'+fi+'-'+pi;
+    return '<button class="pill'+(state[id]?' done':'')+'" data-k="'+id+'">'+p[0]+'<em>'+p[1]+'</em></button>';
+  }).join('');
+  d.innerHTML='<div class="fh">'+fam[0]+'</div><div class="pills">'+pills+'</div>';
+  pw.appendChild(d);
+});
+
+function refresh(){
+  document.querySelectorAll('.card').forEach(c=>{
+    const bs=c.querySelectorAll('input'), n=[...bs].filter(b=>b.checked).length;
+    c.querySelector('.cnt').textContent=n+'/'+bs.length;
+    c.querySelector('.bar i').style.width=(bs.length?n/bs.length*100:0)+'%';
+  });
+  const all=document.querySelectorAll('[data-k]'), done=[...all].filter(e=>state[e.dataset.k]).length;
+  document.getElementById('mfill').style.width=(all.length?done/all.length*100:0)+'%';
+  document.getElementById('mpct').textContent=done+' / '+all.length+' covered';
+}
+document.addEventListener('change',e=>{
+  if(e.target.matches('input[data-k]')){state[e.target.dataset.k]=e.target.checked;save();refresh();}
+});
+document.addEventListener('click',e=>{
+  const p=e.target.closest('.pill'); if(!p)return;
+  state[p.dataset.k]=!state[p.dataset.k];
+  p.classList.toggle('done',!!state[p.dataset.k]);
+  save();refresh();
+});
+document.getElementById('reset').onclick=()=>{
+  state={};save();
+  document.querySelectorAll('input[data-k]').forEach(i=>i.checked=false);
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('done'));
+  refresh();
+};
+refresh();
+</script>
+</body>
+</html>

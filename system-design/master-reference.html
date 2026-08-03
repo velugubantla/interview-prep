@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design interview — master reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+  --red:#9B3226; --red-wash:#F7E9E7;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+    --red:#D98A7E; --red-wash:#241512;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.65;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1000px;margin:0 auto;padding:36px 24px 90px}
+header{border-bottom:2px solid var(--ink);padding-bottom:16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:"IBM Plex Mono",monospace;font-size:28px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+h2{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:500;margin:48px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule);
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;scroll-margin-top:60px}
+h2 em{font-size:11px;color:var(--ink-3);letter-spacing:.05em;text-transform:none;font-style:normal;font-family:"IBM Plex Sans",sans-serif}
+h3.sub3{font-size:15px;font-weight:600;margin:26px 0 10px}
+.lede{color:var(--ink-2);font-size:14px;margin:0 0 18px}
+p{margin:0 0 14px}
+code{font-family:"IBM Plex Mono",monospace;font-size:.9em;background:var(--blue-wash);padding:1px 5px;border-radius:2px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);
+  padding:9px 0;margin-bottom:0;display:flex;gap:4px;flex-wrap:wrap;overflow-x:auto}
+nav a{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;padding:4px 8px;white-space:nowrap;border-radius:2px}
+nav a:hover{color:var(--ink);background:var(--blue-wash)}
+
+/* drill + progress */
+.strip{display:flex;align-items:center;gap:14px;margin:18px 0 0;padding:11px 15px;
+  border:1px solid var(--rule);background:var(--panel);border-radius:2px;flex-wrap:wrap}
+.strip .lbl{font-size:13.5px;font-weight:500}
+.strip .hint{font-size:12.5px;color:var(--ink-3);flex:1;min-width:220px}
+.sw{position:relative;width:40px;height:22px;background:var(--rule);border-radius:11px;cursor:pointer;flex-shrink:0;transition:background .2s;border:none}
+.sw.on{background:var(--green)}
+.sw i{position:absolute;top:3px;left:3px;width:16px;height:16px;background:var(--panel);border-radius:50%;transition:transform .2s}
+.sw.on i{transform:translateX(18px)}
+.mbar{flex:1;min-width:150px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden}
+.mfill{height:100%;width:0;background:var(--green);transition:width .35s}
+.mpct{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.rst{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:none;
+  border:1px solid var(--rule);color:var(--ink-3);padding:5px 10px;cursor:pointer;border-radius:2px}
+.rst:hover{color:var(--ink);border-color:var(--ink-3)}
+.out{transition:filter .18s}
+body.drill-on .out.masked{filter:blur(7px);cursor:pointer;user-select:none}
+
+/* generic controls */
+.sl{display:grid;grid-template-columns:196px 1fr 108px;align-items:center;gap:14px;padding:5px 0}
+.sl label{font-size:13.5px;color:var(--ink-2)}
+.sl .v{font-family:"IBM Plex Mono",monospace;font-size:13.5px;font-weight:500;text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--rule);outline:none;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
+
+/* clock */
+.clock{display:flex;width:100%;border:1px solid var(--rule);overflow:hidden}
+.seg{flex-shrink:0;border:none;border-right:1px solid var(--rule);background:var(--panel);cursor:pointer;
+  padding:10px 8px;text-align:left;min-width:0;font-family:inherit;color:var(--ink);transition:background .2s}
+.seg:last-child{border-right:none}
+.seg:hover{background:var(--blue-wash)}
+.seg.on{background:var(--blue)}
+.seg.on .nm,.seg.on .mm{color:#fff}
+.mm{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-2)}
+.nm{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.scale{display:flex;align-items:center;gap:12px;margin-top:9px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3)}
+.scale i{flex:1;border-top:1px dashed var(--rule)}
+
+/* callout */
+.co{border-left:3px solid var(--blue);background:var(--blue-wash);padding:14px 18px;margin:0 0 18px}
+.co .t{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.co p{margin:0;font-size:14.5px}
+.co .k{font-size:13px;color:var(--ink-2);margin-top:8px;font-style:italic}
+.co.warn{border-color:var(--amber);background:var(--amber-wash)}.co.warn .t{color:var(--amber)}
+.co.good{border-color:var(--green);background:var(--green-wash)}.co.good .t{color:var(--green)}
+.co.bad{border-color:var(--red);background:var(--red-wash)}.co.bad .t{color:var(--red)}
+
+/* cards grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.cell{background:var(--panel);padding:15px 17px;transition:background .25s}
+.cell .k{font-size:12px;color:var(--ink-2)}
+.cell .n{font-family:"IBM Plex Mono",monospace;font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:3px;transition:color .25s}
+.cell .m{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);margin-top:5px}
+.cell.hot{background:var(--amber-wash)}.cell.hot .n{color:var(--amber)}
+
+/* rubric */
+.rub{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.rub .c{background:var(--panel);padding:16px 18px}
+.rub .lv{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600}
+.rub .gr{font-size:12px;color:var(--ink-2);margin:2px 0 10px}
+.rub ul{margin:0;padding-left:16px;font-size:13.5px;color:var(--ink-2)}
+.rub li{margin-bottom:5px}
+.rub .c.you{background:var(--amber-wash)}.rub .c.you .lv{color:var(--amber)}
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;background:var(--amber);color:#fff;padding:2px 6px;margin-left:6px;vertical-align:2px}
+
+/* checklist cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.card{background:var(--panel);padding:14px 16px 16px}
+.card h4{font-size:14px;font-weight:600;margin:0 0 3px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h4 em{font-family:"IBM Plex Mono",monospace;font-size:11px;font-style:normal;color:var(--ink-3);font-weight:400}
+.card .bar{height:3px;background:var(--rule);margin:0 0 10px}
+.card .bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .3s}
+.card label{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);padding:3px 0;cursor:pointer;line-height:1.45}
+.card label:hover{color:var(--ink)}
+.card input{margin:5px 0 0;accent-color:var(--green);flex-shrink:0}
+.card input:checked+span{color:var(--ink-3);text-decoration:line-through}
+
+/* strategy */
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px}
+.strat{border:1px solid var(--rule);background:var(--panel);padding:16px 18px;transition:border-color .25s,background .25s}
+.strat.win{border:2px solid var(--green);background:var(--green-wash)}
+.strat h4{font-size:15.5px;font-weight:600;margin:0 0 2px}
+.strat .sd{font-size:12.5px;color:var(--ink-2);margin-bottom:14px}
+.ln{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px}
+.ln span:last-child{font-family:"IBM Plex Mono",monospace;font-weight:500}
+.tb{height:5px;background:var(--rule);margin:0 0 12px}
+.tb i{display:block;height:100%;width:0;background:var(--ink-3);transition:width .35s}
+.strat.win .tb i{background:var(--green)}
+.tot{display:flex;justify-content:space-between;font-size:14px;font-weight:600;border-top:1px solid var(--rule);padding-top:9px}
+.tot span:last-child{font-family:"IBM Plex Mono",monospace}
+
+/* quorum */
+.nodes{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px}
+.nd{width:56px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid var(--rule);background:var(--panel);font-family:"IBM Plex Mono",monospace;transition:background .2s,border-color .2s}
+.nd b{font-size:15px;font-weight:600}
+.nd s{font-size:9.5px;text-decoration:none;letter-spacing:.08em;margin-top:2px}
+.nd.w{background:var(--blue-wash);border-color:var(--blue);color:var(--blue)}
+.nd.r{background:var(--amber-wash);border-color:var(--amber);color:var(--amber)}
+.nd.o{background:var(--green-wash);border-color:var(--green);color:var(--green)}
+.lg{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-bottom:16px}
+.lg i{display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px;border:1px solid var(--rule)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;text-align:left;padding:0 10px 8px 0;border-bottom:1px solid var(--rule)}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.tt td:first-child{font-weight:500;white-space:nowrap}
+.tt td:nth-child(2){color:var(--blue)}.tt td:nth-child(3){color:var(--amber)}
+.ref td:last-child{text-align:right;font-family:"IBM Plex Mono",monospace;color:var(--ink-2);white-space:nowrap}
+.mx th,.mx td{text-align:center;padding:9px 6px}
+.mx th:first-child,.mx td:first-child{text-align:left;width:180px}
+.mx td{font-family:"IBM Plex Mono",monospace;font-size:14px}
+.mx td:first-child{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500}
+.ok{color:var(--green)}.no{color:var(--red)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+
+/* ACID */
+.acid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:22px}
+.acid .a{background:var(--panel);padding:15px 17px}
+.acid .ltr{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:600;color:var(--blue);line-height:1}
+.acid .nm2{font-size:14px;font-weight:600;margin:4px 0 5px}
+.acid .de{font-size:13px;color:var(--ink-2);line-height:1.5}
+.acid .en{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
+
+/* SOLID */
+.solid .s{display:grid;grid-template-columns:44px 1fr;gap:16px;padding:13px 0;border-bottom:1px solid var(--rule);align-items:start}
+.solid .l{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;color:var(--blue);line-height:1}
+.solid .n2{font-size:14.5px;font-weight:600}
+.solid .d2{font-size:13.5px;color:var(--ink-2);margin:3px 0 7px}
+.solid .sm{font-size:13px;color:var(--red);background:var(--red-wash);padding:6px 11px;display:inline-block}
+.solid .sm b{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;margin-right:7px}
+
+/* patterns + pills */
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:10px;margin-bottom:18px}
+.p{background:var(--panel);padding:12px 14px;border:1px solid var(--rule)}
+.p.warn{border-color:var(--amber)}
+.p .n3{font-size:13.5px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.p .f{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);flex-shrink:0}
+.p .f.hi{color:var(--green)}
+.p .t2{font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.45}
+.p.warn{background:var(--amber-wash)}
+.pgh{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 9px}
+.pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.pill{border:1px solid var(--rule);background:var(--panel);padding:7px 12px;font-size:13px;cursor:pointer;
+  display:flex;flex-direction:column;gap:1px;font-family:inherit;text-align:left;color:var(--ink)}
+.pill:hover{border-color:var(--blue)}
+.pill.done{background:var(--green-wash);border-color:var(--green);color:var(--green)}
+.pill em{font-style:normal;font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.pill.done em{color:var(--green);opacity:.85}
+.pill.core{border-color:var(--blue)}
+
+/* timeline + flow */
+.tl{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.tl .m2{background:var(--panel);padding:13px 14px}
+.tl .m2.key{background:var(--amber-wash)}
+.tl .mo{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-3)}
+.tl .ti{font-size:13.5px;font-weight:600;margin:3px 0 5px}
+.tl .m2.key .ti{color:var(--amber)}
+.tl .de{font-size:12px;color:var(--ink-2);line-height:1.45}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.flow .st{background:var(--panel);padding:12px 14px}
+.flow .num{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--blue);font-weight:600}
+.flow .ti{font-size:13.5px;font-weight:600;margin:3px 0 4px}
+.flow .de{font-size:12px;color:var(--ink-2);line-height:1.45}
+
+ul.plain{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
+ul.plain li{margin-bottom:7px}
+ul.plain b{color:var(--ink);font-weight:500}
+.rules{counter-reset:r;list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px}
+.rules li{counter-increment:r;padding:8px 0 8px 34px;position:relative;font-size:14px;border-bottom:1px solid var(--rule)}
+.rules li::before{content:counter(r,decimal-leading-zero);position:absolute;left:0;top:9px;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--blue);font-weight:600}
+footer{margin-top:50px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+@media (max-width:760px){
+  .rub,.two-col{grid-template-columns:1fr}
+  .tl{grid-template-columns:repeat(2,1fr)}
+  .sl{grid-template-columns:1fr 94px;gap:8px}
+  .sl input[type=range]{grid-column:1/-1}
+  .clock{flex-wrap:wrap}.seg{flex:1 1 33%!important;min-width:112px;border-bottom:1px solid var(--rule)}
+}
+@media print{body{background:#fff}nav,.strip{display:none}.out{filter:none!important}}
+</style>
+</head>
+<body>
+<div class="sheet">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+
+<header>
+  <div class="eyebrow">FAANG-tier loops &middot; senior roles &middot; phased plan</div>
+  <h1>System design interview &mdash; master reference</h1>
+  <p class="sub">Everything in one file: the written cheatsheet, four live demos, a concept tracker, and the low-level design companion. No dependencies beyond a web font &mdash; save it anywhere, open it in any browser, works offline.</p>
+</header>
+
+<nav>
+  <a href="#graded">Graded</a><a href="#clock">Clock</a><a href="#numbers">Numbers</a>
+  <a href="#concepts">Concepts</a><a href="#fanout">Fan-out</a><a href="#quorum">Quorum</a>
+  <a href="#acid">ACID</a><a href="#solid">SOLID</a><a href="#patterns">Patterns</a>
+  <a href="#problems">Problems</a><a href="#tradeoffs">Tradeoffs</a><a href="#plan">Plan</a><a href="#final">Final ten</a>
+</nav>
+
+<div class="strip">
+  <button class="sw" id="sw" aria-label="Toggle drill mode"><i></i></button>
+  <div class="lbl">Drill mode</div>
+  <div class="hint">Blurs every demo result until you tap it. Move a slider, say the numbers out loud, then reveal. This is the only mode that builds recall instead of recognition.</div>
+</div>
+<div class="strip" style="margin-top:8px">
+  <div class="mpct" id="mpct">0 / 0</div>
+  <div class="mbar"><div class="mfill" id="mfill"></div></div>
+  <button class="rst" id="rst">Reset</button>
+</div>
+
+<h2 id="graded">What is actually graded <em>the bar moves with level</em></h2>
+<p class="lede">Four signals, roughly equally weighted. Most rejections are on scoping and tradeoff articulation, not on the design itself.</p>
+<div class="rub">
+  <div class="c"><div class="lv">L5</div><div class="gr">Graded on coverage</div>
+    <ul><li>Remembered to cache, shard, queue</li><li>Design is complete and correct</li><li>Answers the question asked</li></ul></div>
+  <div class="c"><div class="lv">L6</div><div class="gr">Graded on depth and tradeoffs</div>
+    <ul><li>Two or three levels below any box</li><li>Names the alternative unprompted</li><li>Holds a position under pushback</li><li>Knows failure modes, not just patterns</li></ul></div>
+  <div class="c"><div class="lv">L7</div><div class="gr">Graded on problem framing</div>
+    <ul><li>Challenges the requirement itself</li><li>Discusses org and ownership boundaries</li><li>Asks what exists today and how we migrate</li><li>Build vs buy, and who operates it</li></ul></div>
+</div>
+<p style="margin-top:16px;font-size:14px;color:var(--ink-2)"><b style="color:var(--ink)">Silent killers:</b> designing before scoping &middot; never stating a number &middot; one-way monologue &middot; no failure discussion &middot; defending a choice by naming a company that uses it &middot; over-engineering a problem that does not need it.</p>
+
+<h2 id="clock">01 &middot; The 45-minute clock <em>click a phase</em></h2>
+<p class="lede">Segment widths are proportional to real minutes. The two wide blocks are where the score is won; the three narrow ones at the front are where it is most often lost.</p>
+<div class="clock" id="clk"></div>
+<div class="scale"><span>0 min</span><i></i><span>45 min</span></div>
+<div class="co" style="margin-top:14px;min-height:104px"><div class="t" id="cdt"></div><p id="cdd"></p><div class="k" id="cdk"></div></div>
+<div class="co warn">
+  <div class="t">Opening script</div>
+  <p>"Let me make sure I'm solving the right problem. I'll assume we're building X for Y users, with A, B, C in scope and D, E out. On non-functionals I'm going to prioritize [availability over consistency] &mdash; does that match what you want me to optimize? Let me put some numbers on it before I draw anything."</p>
+  <div class="k">When you don't know something: "I don't have deep hands-on with X. What I'd reason from first principles is&hellip; and the thing I'd want to validate before committing is&hellip;" This scores better than bluffing. Bluffing at L6+ is an automatic no-hire when caught.</div>
+</div>
+
+<h2 id="numbers">02 &middot; Back-of-envelope estimation <em>the first ten minutes</em></h2>
+<p class="lede">The number is not the point. Knowing which dimension dominates is the point, because that dimension <em>is</em> the design.</p>
+<div class="sl"><label for="s1">Daily active users</label><input type="range" id="s1" min="4" max="9" step="1" value="7"><span class="v" id="o1"></span></div>
+<div class="sl"><label for="s2">Writes per user per day</label><input type="range" id="s2" min="1" max="200" step="1" value="10"><span class="v" id="o2"></span></div>
+<div class="sl"><label for="s3">Read : write ratio</label><input type="range" id="s3" min="1" max="500" step="1" value="100"><span class="v" id="o3"></span></div>
+<div class="sl"><label for="s4">Payload per write</label><input type="range" id="s4" min="1" max="5" step="1" value="2"><span class="v" id="o4"></span></div>
+<div class="sl"><label for="s5">Retention</label><input type="range" id="s5" min="1" max="10" step="1" value="5"><span class="v" id="o5"></span></div>
+<div class="sl"><label for="s6">Peak multiplier</label><input type="range" id="s6" min="2" max="10" step="1" value="3"><span class="v" id="o6"></span></div>
+<div class="out" data-demo="n" style="margin-top:14px">
+  <div class="grid">
+    <div class="cell" id="cw"><div class="k">Write QPS</div><div class="n" id="r1"></div><div class="m" id="m1"></div></div>
+    <div class="cell" id="cr"><div class="k">Read QPS</div><div class="n" id="r2"></div><div class="m" id="m2"></div></div>
+    <div class="cell" id="cb"><div class="k">Ingest bandwidth</div><div class="n" id="r3"></div><div class="m" id="m3"></div></div>
+    <div class="cell" id="cs"><div class="k">Storage at retention</div><div class="n" id="r4"></div><div class="m" id="m4"></div></div>
+    <div class="cell"><div class="k">Hot cache set</div><div class="n" id="r5"></div><div class="m">1 day reads, 20% hot</div></div>
+    <div class="cell"><div class="k">Shards</div><div class="n" id="r6"></div><div class="m">2 TB usable per node</div></div>
+  </div>
+  <div class="co" style="margin-top:14px"><div class="t">What dominates</div><p id="nv"></p></div>
+</div>
+
+<h3 class="sub3">Constants and the latency ladder</h3>
+<div class="two-col">
+<div><table class="ref">
+<tr><td>Seconds in a day</td><td>~10<sup>5</sup></td></tr>
+<tr><td>1 M / day</td><td>12 /s</td></tr>
+<tr><td>100 M / day</td><td>1.2 K /s</td></tr>
+<tr><td>1 B / day</td><td>12 K /s</td></tr>
+<tr><td>1 KB &times; 1 B rows</td><td>1 TB</td></tr>
+<tr><td>Commodity node</td><td>64 GB / 2 TB</td></tr>
+<tr><td>Single Postgres primary</td><td>5&ndash;10 K w/s</td></tr>
+<tr><td>Realistic cache hit rate</td><td>80&ndash;95%</td></tr>
+<tr><td>99.9% / 99.99% downtime</td><td>8.7 h / 52 min</td></tr>
+</table></div>
+<div><table class="ref">
+<tr><td>L1 cache</td><td>1 ns</td></tr>
+<tr><td>Main memory</td><td>100 ns</td></tr>
+<tr><td>1 MB from memory</td><td>3 &micro;s</td></tr>
+<tr><td>SSD random read</td><td>16 &micro;s</td></tr>
+<tr><td>1 MB from SSD</td><td>49 &micro;s</td></tr>
+<tr><td>Same-DC round trip</td><td>500 &micro;s</td></tr>
+<tr><td>1 MB from disk</td><td>825 &micro;s</td></tr>
+<tr><td>Disk seek</td><td>2 ms</td></tr>
+<tr><td>CA &rarr; Netherlands</td><td>150 ms</td></tr>
+</table></div>
+</div>
+
+<h2 id="concepts">03 &middot; Tier 1 &mdash; do not skip <em>each can be a full deep dive</em></h2>
+<div class="cards" id="t1"></div>
+<h3 class="sub3">Tier 2 &mdash; know one well enough to deep-dive</h3>
+<div class="cards" id="t2"></div>
+
+<h2 id="fanout">04 &middot; Fan-out on write vs read <em>the most-asked tradeoff</em></h2>
+<p class="lede">The crossover is not a matter of taste. It falls out of the read-to-write ratio and the follower count, and it moves the moment a celebrity enters the system.</p>
+<div class="sl"><label for="q1">Daily active users</label><input type="range" id="q1" min="5" max="9" step="1" value="8"><span class="v" id="w1"></span></div>
+<div class="sl"><label for="q2">Followers per user</label><input type="range" id="q2" min="1" max="5" step="1" value="3"><span class="v" id="w2"></span></div>
+<div class="sl"><label for="q3">Posts per user per day</label><input type="range" id="q3" min="1" max="20" step="1" value="2"><span class="v" id="w3"></span></div>
+<div class="sl"><label for="q4">Feed loads per user per day</label><input type="range" id="q4" min="1" max="50" step="1" value="20"><span class="v" id="w4"></span></div>
+<div class="out" data-demo="f" style="margin-top:14px">
+  <div class="two">
+    <div class="strat" id="sa"><h4>Fan-out on write</h4><div class="sd">Push each post into every follower's feed at publish time</div>
+      <div class="ln"><span>Write path ops/s</span><span id="aw"></span></div><div class="tb"><i id="awb"></i></div>
+      <div class="ln"><span>Read path ops/s</span><span id="ar"></span></div><div class="tb"><i id="arb"></i></div>
+      <div class="tot"><span>Total</span><span id="at"></span></div></div>
+    <div class="strat" id="sb"><h4>Fan-out on read</h4><div class="sd">Store the post once, merge followee timelines at read time</div>
+      <div class="ln"><span>Write path ops/s</span><span id="bw"></span></div><div class="tb"><i id="bwb"></i></div>
+      <div class="ln"><span>Read path ops/s</span><span id="br"></span></div><div class="tb"><i id="brb"></i></div>
+      <div class="tot"><span>Total</span><span id="bt"></span></div></div>
+  </div>
+  <div class="co" id="fvw" style="margin-top:14px"><div class="t">Crossover</div><p id="fv"></p></div>
+</div>
+
+<h2 id="quorum">05 &middot; Quorum tuning <em>W + R &gt; N, made visible</em></h2>
+<p class="lede">Drag until the sets stop overlapping and watch what you lose. The inequality is not a rule to memorize &mdash; it is the condition under which a read is guaranteed to touch a node that saw the write.</p>
+<div class="sl"><label for="n1">Replicas (N)</label><input type="range" id="n1" min="3" max="9" step="1" value="5"><span class="v" id="vn"></span></div>
+<div class="sl"><label for="n2">Write quorum (W)</label><input type="range" id="n2" min="1" max="9" step="1" value="3"><span class="v" id="vw"></span></div>
+<div class="sl"><label for="n3">Read quorum (R)</label><input type="range" id="n3" min="1" max="9" step="1" value="3"><span class="v" id="vr"></span></div>
+<div class="out" data-demo="q" style="margin-top:14px">
+  <div class="nodes" id="nds"></div>
+  <div class="lg">
+    <span><i style="background:var(--blue-wash);border-color:var(--blue)"></i>write set</span>
+    <span><i style="background:var(--amber-wash);border-color:var(--amber)"></i>read set</span>
+    <span><i style="background:var(--green-wash);border-color:var(--green)"></i>overlap</span>
+    <span><i style="background:var(--panel)"></i>idle</span></div>
+  <div class="grid">
+    <div class="cell"><div class="k">W + R vs N</div><div class="n" id="eq"></div></div>
+    <div class="cell"><div class="k">Write fault tolerance</div><div class="n" id="fw"></div></div>
+    <div class="cell"><div class="k">Read fault tolerance</div><div class="n" id="fr"></div></div>
+    <div class="cell"><div class="k">Config shape</div><div class="n" id="sh" style="font-size:15px"></div></div>
+  </div>
+  <div class="co" id="qvw" style="margin-top:14px"><div class="t">Reading</div><p id="qv"></p></div>
+</div>
+
+<h2 id="acid">06 &middot; ACID in full <em>belongs to the main design round</em></h2>
+<div class="acid">
+  <div class="a"><div class="ltr">A</div><div class="nm2">Atomicity</div>
+    <div class="de">All operations commit or none do. Not about concurrency &mdash; about abort handling and partial failure.</div>
+    <div class="en">undo log, rollback</div></div>
+  <div class="a"><div class="ltr">C</div><div class="nm2">Consistency</div>
+    <div class="de">Application invariants hold before and after. The weakest letter &mdash; it is your code's job, not the database's.</div>
+    <div class="en">constraints, your code</div></div>
+  <div class="a"><div class="ltr">I</div><div class="nm2">Isolation</div>
+    <div class="de">Concurrent transactions behave as if serial. In practice you get a weaker level, and that level is a design decision.</div>
+    <div class="en">locks, MVCC, SSI</div></div>
+  <div class="a"><div class="ltr">D</div><div class="nm2">Durability</div>
+    <div class="de">Once committed, survives crash. On one node that means fsync; in a replicated system it means committed to a quorum.</div>
+    <div class="en">WAL, fsync, quorum</div></div>
+</div>
+<table class="mx">
+<tr><th>Isolation level</th><th>Dirty read</th><th>Lost update</th><th>Non-repeatable</th><th>Phantom</th><th>Write skew</th></tr>
+<tr><td>Read uncommitted</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+<tr><td>Read committed</td><td class="ok">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+<tr><td>Repeatable read</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+<tr><td>Snapshot isolation</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="no">&#10007;</td></tr>
+<tr><td>Serializable</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td></tr>
+</table>
+<p style="margin-top:12px;font-size:13px;color:var(--ink-3)">&#10003; prevented &nbsp; &#10007; still possible. Level names are not portable &mdash; Oracle's "serializable" is snapshot isolation, and MySQL's repeatable read blocks some phantoms. Saying that out loud is a senior signal. <b style="color:var(--ink-2)">Write skew</b> is the one that bites real systems: two transactions each read a valid state, each write, and together break an invariant neither violated alone. It is why double-booking, overdraft and on-call gap bugs survive code review.</p>
+
+<h2 id="solid">07 &middot; SOLID <em>learn the failure mode, not the acronym</em></h2>
+<div class="solid">
+  <div class="s"><div class="l">S</div><div><div class="n2">Single responsibility</div>
+    <div class="d2">One reason to change &mdash; meaning one actor who can demand a change to it.</div>
+    <div class="sm"><b>When violated</b>Every feature touches the same class. Merge conflicts, wide blast radius, no safe refactor.</div></div></div>
+  <div class="s"><div class="l">O</div><div><div class="n2">Open / closed</div>
+    <div class="d2">New behavior arrives as new code, not edits to old code.</div>
+    <div class="sm"><b>When violated</b>Adding one case means editing a switch in five files, and you will miss one.</div></div></div>
+  <div class="s"><div class="l">L</div><div><div class="n2">Liskov substitution</div>
+    <div class="d2">Any subtype is usable wherever the base type is expected, without the caller knowing.</div>
+    <div class="sm"><b>When violated</b><code>instanceof</code> checks scattered through callers. The abstraction is a lie and everyone works around it.</div></div></div>
+  <div class="s"><div class="l">I</div><div><div class="n2">Interface segregation</div>
+    <div class="d2">No client forced to depend on methods it does not use. Many small interfaces beat one large one.</div>
+    <div class="sm"><b>When violated</b>Fat interfaces and stubs that throw <code>UnsupportedOperation</code>.</div></div></div>
+  <div class="s"><div class="l">D</div><div><div class="n2">Dependency inversion</div>
+    <div class="d2">High-level policy depends on abstractions. Wire concretes in at the edge.</div>
+    <div class="sm"><b>When violated</b>Business logic pinned to a vendor SDK. Untestable, and unmigratable when terms change.</div></div></div>
+</div>
+<div class="co warn" style="margin-top:20px"><div class="t">The senior move</div>
+<p>Knowing when <em>not</em> to apply these. Every one buys flexibility with indirection, and indirection has a permanent readability cost. An interface for a thing with one implementation and no plausible second is not good design &mdash; it is speculative generality. Say the tradeoff out loud: "I'd keep this concrete until there's a second implementation."</p></div>
+
+<h2 id="patterns">08 &middot; Design patterns that actually appear <em>green tag = high frequency &middot; amber card = trap, expect a follow-up</em></h2>
+<div class="pgh">Creational</div>
+<div class="pcards">
+  <div class="p"><div class="n3">Factory / Abstract factory<span class="f hi">high</span></div><div class="t2">Object choice depends on runtime input or config. Parsers, payment providers, notification channels.</div></div>
+  <div class="p"><div class="n3">Builder<span class="f hi">high</span></div><div class="t2">Many optional parameters, or an immutable object assembled in steps. Kills telescoping constructors.</div></div>
+  <div class="p warn"><div class="n3">Singleton<span class="f">trap</span></div><div class="t2">Asked deliberately. Say it is global mutable state, hostile to testing and concurrency &mdash; prefer one instance managed by DI.</div></div>
+  <div class="p"><div class="n3">Prototype<span class="f">low</span></div><div class="t2">Cloning an expensive-to-construct object. Rare in interviews.</div></div>
+</div>
+<div class="pgh">Structural</div>
+<div class="pcards">
+  <div class="p"><div class="n3">Adapter<span class="f hi">high</span></div><div class="t2">Wrapping a third-party or legacy interface so your core does not depend on it. The practical face of dependency inversion.</div></div>
+  <div class="p"><div class="n3">Decorator<span class="f hi">high</span></div><div class="t2">Layering behavior without subclass explosion. Retries, caching, logging, auth around a client.</div></div>
+  <div class="p"><div class="n3">Facade<span class="f">medium</span></div><div class="t2">One simple entry point over a messy subsystem.</div></div>
+  <div class="p"><div class="n3">Proxy<span class="f">medium</span></div><div class="t2">Lazy loading, access control, or a remote call behind a local-looking interface.</div></div>
+  <div class="p"><div class="n3">Composite<span class="f">medium</span></div><div class="t2">Trees where leaves and branches are treated uniformly. File systems, org charts.</div></div>
+  <div class="p"><div class="n3">Flyweight<span class="f">low</span></div><div class="t2">Millions of near-identical objects sharing intrinsic state. Chess pieces, game tiles.</div></div>
+</div>
+<div class="pgh">Behavioral</div>
+<div class="pcards">
+  <div class="p"><div class="n3">Strategy<span class="f hi">high</span></div><div class="t2">Interchangeable algorithms picked at runtime. Pricing, eviction policies, matching. The most common correct answer in LLD.</div></div>
+  <div class="p"><div class="n3">Observer<span class="f hi">high</span></div><div class="t2">One-to-many notification within a process. In-process cousin of pub/sub.</div></div>
+  <div class="p"><div class="n3">State<span class="f hi">high</span></div><div class="t2">Behavior changes with lifecycle stage. Orders, vending machines, elevators, reservations.</div></div>
+  <div class="p"><div class="n3">Command<span class="f">medium</span></div><div class="t2">Operations as objects &mdash; undo/redo, queueing, audit log, replay.</div></div>
+  <div class="p"><div class="n3">Chain of responsibility<span class="f">medium</span></div><div class="t2">Request passed along handlers until one takes it. Middleware, validation, approvals.</div></div>
+  <div class="p"><div class="n3">Template method<span class="f">medium</span></div><div class="t2">Fixed skeleton, variable steps. Prefer composition where you can.</div></div>
+</div>
+<h3 class="sub3">The LLD round framework</h3>
+<div class="flow">
+  <div class="st"><div class="num">01</div><div class="ti">Clarify scope</div><div class="de">Which use cases are in, which are explicitly out.</div></div>
+  <div class="st"><div class="num">02</div><div class="ti">Actors and use cases</div><div class="de">Actors and the operations each performs. This produces your interfaces.</div></div>
+  <div class="st"><div class="num">03</div><div class="ti">Core entities</div><div class="de">Nouns become classes, verbs become methods. Name the invariants each owns.</div></div>
+  <div class="st"><div class="num">04</div><div class="ti">Relationships</div><div class="de">Composition over inheritance. Class diagram with cardinalities.</div></div>
+  <div class="st"><div class="num">05</div><div class="ti">Concurrency</div><div class="de">What is shared, locked, immutable. Most-skipped step, easiest differentiator.</div></div>
+  <div class="st"><div class="num">06</div><div class="ti">Extension</div><div class="de">"Now add feature X." Good designs absorb it with new classes, not edits.</div></div>
+</div>
+
+<h2 id="problems">09 &middot; Canonical problems <em>click to track &middot; study by pattern</em></h2>
+<p class="lede">Write each one cold on paper in 45 minutes before reading any reference answer. Reading solutions creates false confidence.</p>
+<div id="probs"></div>
+<h3 class="sub3">Low-level design problems</h3>
+<p class="lede">Outlined tiles are the four to do first &mdash; between them they cover every distinct LLD skill: strategy selection, state machines, data structure design, and concurrency. The rest are variations. Click any tile to mark it done.</p>
+<div id="lld"></div>
+
+<h2 id="tradeoffs">10 &middot; Tradeoffs to rehearse out loud</h2>
+<table class="tt">
+<tr><th>Decision</th><th>Pick the first when</th><th>Pick the second when</th></tr>
+<tr><td>SQL / NoSQL</td><td>Relations, transactions, unknown query patterns</td><td>Known access patterns, extreme scale on one axis</td></tr>
+<tr><td>Normalize / denormalize</td><td>Write-heavy, consistency matters</td><td>Read-heavy, latency matters</td></tr>
+<tr><td>Sync / async</td><td>Caller needs the result to proceed</td><td>Caller can be told "accepted"</td></tr>
+<tr><td>Strong / eventual</td><td>Money, inventory, auth</td><td>Feeds, counts, social graphs</td></tr>
+<tr><td>Fan-out write / read</td><td>Read-heavy, bounded followers</td><td>Write-heavy or celebrity skew &mdash; go hybrid</td></tr>
+<tr><td>Cache-aside / write-through</td><td>Read-heavy, tolerate staleness</td><td>Cache and store must stay coherent</td></tr>
+<tr><td>Monolith / services</td><td>Small team, boundaries still moving</td><td>Independent scaling <em>and</em> independent teams</td></tr>
+<tr><td>Push / pull</td><td>Low latency, few consumers</td><td>Many consumers, consumer-paced</td></tr>
+<tr><td>Single / multi region</td><td>Cost-sensitive, RTO tolerant</td><td>Regulatory or true global latency need</td></tr>
+</table>
+
+<h2 id="plan">11 &middot; The prep arc <em>phase 5 decides the outcome &middot; one phase &asymp; one month &mdash; pace to your timeline</em></h2>
+<div class="tl">
+  <div class="m2"><div class="mo">Phase 1</div><div class="ti">Primitives</div><div class="de">DDIA cover to cover. No mock problems yet.</div></div>
+  <div class="m2"><div class="mo">Phase 2</div><div class="ti">Primitives</div><div class="de">DDIA ch. 5&ndash;9 twice. Dynamo, Bigtable, Kafka, Raft.</div></div>
+  <div class="m2"><div class="mo">Phase 3</div><div class="ti">Framework</div><div class="de">Drill the clock. 20 timed estimation reps.</div></div>
+  <div class="m2"><div class="mo">Phase 4</div><div class="ti">Problems</div><div class="de">Five a week, written cold before any reference.</div></div>
+  <div class="m2 key"><div class="mo">Phase 5</div><div class="ti">Mocks &times;12</div><div class="de">Real engineers. Recorded. The phase people skip.</div></div>
+  <div class="m2"><div class="mo">Phase 6</div><div class="ti">Weak spots</div><div class="de">Two weakest Tier-1 areas, LLD, coding, behavioral.</div></div>
+</div>
+<h3 class="sub3">Materials</h3>
+<ul class="plain">
+<li><b>Designing Data-Intensive Applications</b> &mdash; Kleppmann. Highest ROI text by a wide margin. Non-optional.</li>
+<li><b>System Design Interview Vol. 1 &amp; 2</b> &mdash; Alex Xu. Problem coverage and structure.</li>
+<li><b>Papers, skimmed for the idea:</b> Dynamo, Bigtable, GFS, MapReduce, Spanner, Kafka, Raft, Chubby, Cassandra.</li>
+<li><b>Engineering blogs</b> &mdash; Netflix, Uber, Stripe, Discord, Cloudflare. Read for how they explain tradeoffs, which is the graded skill.</li>
+<li><b>Mocks</b> &mdash; interviewing.io for real FAANG interviewers. Budget for it; highest-ROI spend in the whole plan.</li>
+</ul>
+
+<h2 id="final">12 &middot; Twenty minutes before the round</h2>
+<ol class="rules">
+  <li>Scope before you design. Get explicit agreement.</li>
+  <li>Say a number in the first eight minutes.</li>
+  <li>Draw the happy path end to end before optimizing anything.</li>
+  <li>Name the alternative and why you rejected it &mdash; before being asked.</li>
+  <li>Offer the deep dive: "the two risky parts are X and Y &mdash; which?"</li>
+  <li>Say what breaks first and how you would detect it.</li>
+  <li>Say "I don't know," then reason from first principles.</li>
+  <li>Stop talking. Check in. It is a collaboration, not a lecture.</li>
+  <li>Don't over-engineer. "One primary is fine here" is a strong-hire sentence.</li>
+  <li>Close by recapping the two or three decisions that defined the design.</li>
+</ol>
+
+<footer>Self-contained master reference. Progress is stored in this browser only. Print to PDF for a paper copy &mdash; checkboxes print as checked.</footer>
+</div>
+
+<script>
+const g=id=>document.getElementById(id);
+function f(n,u){const s=['','K','M','G','T','P','E'];let i=0;
+  while(Math.abs(n)>=1000&&i<6){n/=1000;i++}
+  return (n>=100?Math.round(n):Number(n.toFixed(1))).toLocaleString()+' '+s[i]+(u||'');}
+
+/* drill */
+let drill=false;
+g('sw').onclick=()=>{drill=!drill;g('sw').classList.toggle('on',drill);
+  document.body.classList.toggle('drill-on',drill);
+  if(!drill)document.querySelectorAll('.out').forEach(o=>o.classList.remove('masked'));};
+function maskOn(d){if(drill)document.querySelector('.out[data-demo="'+d+'"]').classList.add('masked');}
+document.querySelectorAll('.out').forEach(o=>o.addEventListener('click',()=>o.classList.remove('masked')));
+
+/* clock */
+const PH=[
+[5,'Clarify','Functional requirements in three to five bullets, plus an explicit list of non-goals. State which non-functional you are optimizing for and get agreement before drawing anything.','Failure here: designing before scoping. The most common senior-level rejection.'],
+[3,'Quantify','Scale, QPS, storage, latency SLO, consistency requirement. Say every number out loud, even rough ones.','Failure here: an interviewer who never hears a number assumes you cannot produce one.'],
+[4,'API + model','Three to five endpoints and the core entities. Name the access pattern before you name the datastore.','Failure here: picking a database by reputation instead of by access pattern.'],
+[13,'High-level design','Draw it once, end to end: client, edge, services, storage, async path, analytics. Get data flowing before optimizing any part.','Failure here: orphan boxes with nothing flowing through them.'],
+[13,'Deep dive','Let them pick, or offer: the two risky parts are X and Y, which do you want. Go two or three levels down and know the failure modes.','Offering the choice is itself a seniority signal. Most candidates wait to be told.'],
+[5,'Failure and ops','What breaks first, how you detect it, how it degrades rather than dies. Blast radius, rollback, and the metric you would page on.','Failure here: a design with no stated failure behaviour reads as untested thinking.'],
+[2,'Wrap','Recap the two or three decisions that defined the design, and name what you would revisit with more time.','Failure here: trailing off. The last thing they hear becomes the summary they write.']];
+PH.forEach((p,i)=>{const b=document.createElement('button');b.className='seg';b.style.flex=p[0];
+b.innerHTML='<div class="mm">'+p[0]+' min</div><div class="nm">'+p[1]+'</div>';
+b.onclick=()=>{document.querySelectorAll('.seg').forEach(s=>s.classList.remove('on'));b.classList.add('on');
+g('cdt').textContent=p[1]+' \u00b7 '+p[0]+' minutes';g('cdd').textContent=p[2];g('cdk').textContent=p[3];};
+g('clk').appendChild(b);if(i===0)b.click();});
+
+/* napkin */
+const DAU={4:['10 K',1e4],5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const PAY={1:['1 KB text',1024],2:['10 KB record',10240],3:['100 KB thumb',102400],4:['500 KB image',512000],5:['3 MB media',3145728]};
+function napkin(){
+ const d=DAU[s1.value],w=+s2.value,rw=+s3.value,y=PAY[s4.value],ret=+s5.value,pk=+s6.value;
+ g('o1').textContent=d[0];g('o2').textContent=w;g('o3').textContent=rw+' : 1';
+ g('o4').textContent=y[0];g('o5').textContent=ret+' yr';g('o6').textContent=pk+'\u00d7';
+ const wq=d[1]*w/86400,rq=wq*rw,bps=wq*y[1],yr=bps*31536000,tot=yr*ret,rep=tot*3;
+ g('r1').textContent=f(wq);g('m1').textContent='peak '+f(wq*pk);
+ g('r2').textContent=f(rq);g('m2').textContent='peak '+f(rq*pk);
+ g('r3').textContent=f(bps*8,'bps');g('m3').textContent=f(bps,'B')+' / s';
+ g('r4').textContent=f(tot,'B');g('m4').textContent='\u00d73 replicas = '+f(rep,'B');
+ g('r5').textContent=f(rq*86400*y[1]*0.2,'B');
+ g('r6').textContent=Math.max(1,Math.ceil(rep/2e12)).toLocaleString();
+ const sc={cw:wq/5000,cr:rq/100000,cb:bps/1.25e8,cs:rep/5e13};
+ const top=Object.keys(sc).reduce((a,b)=>sc[a]>sc[b]?a:b);
+ Object.keys(sc).forEach(k=>g(k).classList.toggle('hot',k===top&&sc[top]>1));
+ let v;
+ if(sc[top]<=1)v='Nothing dominates yet. One well-indexed primary plus a cache is a legitimate answer here \u2014 say that out loud. Reaching for shards at this scale is the most common over-engineering tell.';
+ else if(top==='cb')v='Payload and bandwidth dominate. This is a blob store plus CDN problem: metadata in the database, bytes in object storage, presigned uploads. Never put the object in the row.';
+ else if(top==='cr')v='Reads dominate. The cache tier and read replicas are the design; the write path is almost incidental. Expect the deep dive to be invalidation, hot keys and stampede protection.';
+ else if(top==='cw')v='Writes dominate. A single leader will not absorb this. Partitioning strategy and a log-structured store are the conversation, and the follow-up will be resharding without downtime.';
+ else v='Storage dominates. Retention policy, tiering and compaction are the real design, not QPS. Asking whether you are allowed to delete anything reads as senior.';
+ g('nv').textContent=v;}
+['s1','s2','s3','s4','s5','s6'].forEach(i=>g(i).addEventListener('input',()=>{napkin();maskOn('n');}));
+
+/* fanout */
+const FU={5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const FO={1:['50',50],2:['200',200],3:['1 K',1000],4:['10 K',10000],5:['100 K celebrity',100000]};
+function fanout(){
+ const u=FU[q1.value],fo=FO[q2.value],p=+q3.value,l=+q4.value;
+ g('w1').textContent=u[0];g('w2').textContent=fo[0];g('w3').textContent=p;g('w4').textContent=l;
+ const ps=u[1]*p/86400,ls=u[1]*l/86400;
+ const aw=ps*fo[1],ar=ls,at=aw+ar,bw=ps,br=ls*fo[1],bt=bw+br,mx=Math.max(at,bt);
+ g('aw').textContent=f(aw);g('ar').textContent=f(ar);g('at').textContent=f(at);
+ g('bw').textContent=f(bw);g('br').textContent=f(br);g('bt').textContent=f(bt);
+ g('awb').style.width=(aw/mx*100)+'%';g('arb').style.width=(ar/mx*100)+'%';
+ g('bwb').style.width=(bw/mx*100)+'%';g('brb').style.width=(br/mx*100)+'%';
+ g('sa').classList.toggle('win',at<=bt);g('sb').classList.toggle('win',bt<at);
+ const box=g('fvw');box.className='co';let v;
+ if(fo[1]>=100000){box.classList.add('warn');
+  v='Celebrity regime. Fan-out on write means one post triggers '+f(fo[1])+'writes \u2014 a thundering write storm and a latency spike on publish. The real answer is hybrid: precompute feeds for normal accounts, pull celebrity posts at read time and merge. Say "hybrid" and name the follower threshold that switches strategy.';}
+ else if(at<bt){box.classList.add('good');
+  v='Fan-out on write wins by '+f(bt-at)+'ops/s. Reads outnumber writes enough that precomputing the feed pays for itself. The cost you accept is write amplification and stale feeds during backfill.';}
+ else{box.classList.add('good');
+  v='Fan-out on read wins by '+f(at-bt)+'ops/s. Writes are frequent relative to reads, so materializing feeds would be work that mostly goes unread. The cost you accept is read latency proportional to followee count.';}
+ g('fv').textContent=v;}
+['q1','q2','q3','q4'].forEach(i=>g(i).addEventListener('input',()=>{fanout();maskOn('f');}));
+
+/* quorum */
+function quorum(){
+ const N=+n1.value;n2.max=N;n3.max=N;
+ if(+n2.value>N)n2.value=N;if(+n3.value>N)n3.value=N;
+ const W=+n2.value,R=+n3.value;
+ g('vn').textContent=N;g('vw').textContent=W;g('vr').textContent=R;
+ let h='';
+ for(let i=0;i<N;i++){const inW=i<W,inR=i>=N-R;
+  const c=inW&&inR?'o':inW?'w':inR?'r':'';
+  const lab=inW&&inR?'W R':inW?'W':inR?'R':'\u2014';
+  h+='<div class="nd '+c+'"><b>'+(i+1)+'</b><s>'+lab+'</s></div>';}
+ g('nds').innerHTML=h;
+ const strong=W+R>N;
+ g('eq').textContent=W+' + '+R+(strong?' > ':' \u2264 ')+N;
+ g('eq').style.color=strong?'var(--green)':'var(--red)';
+ g('fw').textContent=(N-W)+' node'+(N-W===1?'':'s');
+ g('fr').textContent=(N-R)+' node'+(N-R===1?'':'s');
+ let shape;
+ if(W===N&&R===1)shape='Read optimized';else if(W===1&&R===N)shape='Write optimized';
+ else if(strong&&W===R)shape='Balanced quorum';else if(strong)shape='Skewed quorum';else shape='Eventual only';
+ g('sh').textContent=shape;
+ const box=g('qvw');box.className='co';let v;
+ if(!strong){box.classList.add('bad');
+  v='The sets do not overlap. A read can hit only nodes that never saw the latest write, so you are in eventual consistency territory \u2014 stale reads are possible and you need read repair plus anti-entropy to converge. Legitimate for feeds and counters. Not legitimate for balances or inventory.';}
+ else if(W===N){box.classList.add('warn');
+  v='Overlap guaranteed, but W equals N means a single node failure blocks all writes. Reads are as fast and available as possible \u2014 defensible for config data written rarely and read constantly.';}
+ else if(R===N){box.classList.add('warn');
+  v='Overlap guaranteed, but R equals N means a single node failure blocks all reads. Writes are cheap and highly available. Rarely the right call \u2014 most systems read far more than they write.';}
+ else{box.classList.add('good');
+  v='Every read set intersects every write set, so at least one node returns the latest version and versioning resolves the rest. You tolerate '+(N-W)+' failures on writes and '+(N-R)+' on reads while keeping fresh reads. Default here, and say the reasoning out loud rather than quoting the inequality.';}
+ g('qv').textContent=v;}
+['n1','n2','n3'].forEach(i=>g(i).addEventListener('input',()=>{quorum();maskOn('q');}));
+
+/* checklists */
+const T1=[
+['Networking and protocols',['DNS, anycast, GeoDNS','TCP vs UDP, connection cost, keep-alive','TLS handshake cost and termination point','HTTP/1.1 vs 2 vs 3 (QUIC)','gRPC vs REST vs GraphQL','WebSocket vs SSE vs long polling']],
+['Load balancing and routing',['L4 vs L7, and when you need L7','RR, least-conn, consistent hash, power-of-two','Health checks, draining, sticky sessions','API gateway responsibilities']],
+['Caching',['Placement: client, CDN, edge, app, DB','Cache-aside, read/write-through, write-behind','Eviction: LRU, LFU, TTL, ARC','Stampede, hot key, penetration, cold start','Invalidation strategy']],
+['Storage internals',['B-tree vs LSM: read/write amplification','Index design, covering and composite order','Isolation levels and the anomaly each prevents','MVCC and write-ahead log','Store choice driven by access pattern']],
+['Replication',['Single-leader, multi-leader, leaderless','Sync vs async lag, read-your-writes','Quorum W + R > N, hinted handoff','Failover, split-brain, fencing tokens','LWW, vector clocks, CRDTs']],
+['Partitioning',['Range vs hash vs directory','Consistent hashing with virtual nodes','Hot shard and the celebrity problem','Resharding live: double-write, backfill, cutover','Cross-shard queries and their cost']],
+['Consistency and consensus',['CAP stated correctly, and PACELC','The consistency ladder, top to bottom','Raft: election, log replication, commit index','Where consensus really lives: metadata, locks, election','2PC vs saga vs transactional outbox','Idempotency keys and the exactly-once illusion']],
+['Messaging and streaming',['Queue vs replayable log','Kafka: partition, offset, consumer group, ordering','At-most / at-least / effectively-once','Backpressure, DLQ, poison message, consumer lag','Fan-out on write vs on read']],
+['Resilience',['Timeouts always; retries with backoff and jitter','Circuit breaker, bulkhead, load shedding','Rate limiting: token, leaky, sliding window','Distributed rate limiting','Failure domains, blast radius, cells']]];
+const T2=[
+['Specialized indexes and structures',['Inverted index, BM25, near-real-time indexing','Geohash, quadtree, S2, R-tree','Bloom filter, HyperLogLog, Count-Min Sketch','Time series: rollups, retention tiers, cardinality']],
+['Platform and practice',['Object storage, presigned URLs, multipart, CDN invalidation','CDC, event-time vs processing-time, watermarks','RED / USE metrics, tracing, SLI-SLO-error budget','OAuth2 / OIDC, JWT vs session, secrets, least privilege']],
+['ML &amp; AI infrastructure',['Vector indexes: HNSW, IVF, recall vs latency','RAG serving: chunking, retrieval, reranking, caching','Feature store, online/offline skew','Model rollout: shadow, canary, drift detection']]];
+const PROBS=[
+['Simple, and easy to over-engineer',[['URL shortener','key generation'],['Pastebin','blob + metadata']]],
+['Feed and social',[['Twitter feed','fan-out write vs read'],['Instagram','feed + media'],['Notification system','multi-channel fan-out']]],
+['Realtime and collaborative',[['WhatsApp','connection state'],['Google Docs','OT vs CRDT'],['Autocomplete','trie + top-K']]],
+['Media and storage',[['YouTube','transcode + CDN'],['Dropbox','delta sync, dedupe']]],
+['Geospatial',[['Uber matching','geo index + write amp'],['Yelp nearby','geo read-heavy']]],
+['Correctness over availability',[['Ticketmaster','inventory contention'],['Payment system','ledger, saga, reconcile']]],
+['Ingest and analytics',[['Web crawler','frontier + politeness'],['Ad click aggregation','event-time windows'],['Metrics system','cardinality explosion']]],
+['Infrastructure',[['Rate limiter','distributed counters'],['Job scheduler','election + at-least-once'],['ML feature serving','online/offline skew']]]];
+const LLD=[['Parking lot','strategy + state',1],['Elevator system','state + scheduling',1],['In-memory LRU cache','data structure design',1],['Rate limiter (OO)','strategy + concurrency',1],
+['Vending machine','state machine',0],['Chess / tic-tac-toe','composite + rules',0],['Library management','entities + lifecycle',0],['ATM','state + transactions',0],
+['Splitwise','graph + settlement',0],['Logging framework','chain of responsibility',0],['Notification service','observer + strategy',0],['Deck of cards','composition',0]];
+
+const KEY='sd-master-v1';let state={};
+try{state=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){state={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+function buildCards(el,data,pre){
+ data.forEach((grp,gi)=>{const c=document.createElement('div');c.className='card';
+  const items=grp[1].map((t,ii)=>{const id=pre+'-'+gi+'-'+ii;
+   return '<label><input type="checkbox" data-k="'+id+'"'+(state[id]?' checked':'')+'><span>'+t+'</span></label>';}).join('');
+  c.innerHTML='<h4>'+grp[0]+'<em class="cnt"></em></h4><div class="bar"><i></i></div>'+items;el.appendChild(c);});}
+buildCards(g('t1'),T1,'t1');buildCards(g('t2'),T2,'t2');
+
+PROBS.forEach((fam,fi)=>{const d=document.createElement('div');d.style.marginBottom='14px';
+ const pills=fam[1].map((p,pi)=>{const id='p-'+fi+'-'+pi;
+  return '<button class="pill'+(state[id]?' done':'')+'" data-k="'+id+'">'+p[0]+'<em>'+p[1]+'</em></button>';}).join('');
+ d.innerHTML='<div class="pgh">'+fam[0]+'</div><div class="pills">'+pills+'</div>';g('probs').appendChild(d);});
+g('lld').innerHTML='<div class="pills">'+LLD.map((p,i)=>{const id='l-'+i;
+ return '<button class="pill'+(p[2]?' core':'')+(state[id]?' done':'')+'" data-k="'+id+'">'+p[0]+'<em>'+p[1]+'</em></button>';}).join('')+'</div>';
+
+function refresh(){
+ document.querySelectorAll('.card').forEach(c=>{const bs=c.querySelectorAll('input'),n=[...bs].filter(b=>b.checked).length;
+  c.querySelector('.cnt').textContent=n+'/'+bs.length;
+  c.querySelector('.bar i').style.width=(bs.length?n/bs.length*100:0)+'%';});
+ const all=document.querySelectorAll('[data-k]'),done=[...all].filter(e=>state[e.dataset.k]).length;
+ g('mfill').style.width=(all.length?done/all.length*100:0)+'%';
+ g('mpct').textContent=done+' / '+all.length;}
+document.addEventListener('change',e=>{if(e.target.matches('input[data-k]')){
+ state[e.target.dataset.k]=e.target.checked;save();refresh();}});
+document.addEventListener('click',e=>{const p=e.target.closest('.pill');if(!p)return;
+ state[p.dataset.k]=!state[p.dataset.k];p.classList.toggle('done',!!state[p.dataset.k]);save();refresh();});
+g('rst').onclick=()=>{state={};save();
+ document.querySelectorAll('input[data-k]').forEach(i=>i.checked=false);
+ document.querySelectorAll('.pill').forEach(p=>p.classList.remove('done'));refresh();};
+
+napkin();fanout();quorum();refresh();
+</script>
+</body>
+</html>

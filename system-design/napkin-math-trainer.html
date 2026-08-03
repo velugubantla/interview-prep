@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Napkin math trainer — system design estimation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:15px; line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.sheet{max-width:900px;margin:0 auto;padding:40px 24px 72px}
+header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:32px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:"IBM Plex Mono",monospace;font-size:26px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+h2{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);font-weight:500;margin:36px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:180px 1fr 110px;align-items:center;gap:14px;padding:9px 0}
+.row label{font-size:14px;color:var(--ink-2)}
+.row .val{font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:500;text-align:right;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--rule);outline:none;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]:focus-visible{outline:2px solid var(--blue);outline-offset:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.cell{background:var(--paper);padding:16px 18px}
+.cell .k{font-size:12px;color:var(--ink-2);letter-spacing:.04em}
+.cell .n{font-family:"IBM Plex Mono",monospace;font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:4px;transition:color .25s}
+.cell .m{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);margin-top:5px}
+.cell.hot{background:var(--amber-wash)}
+.cell.hot .n{color:var(--amber)}
+.verdict{margin-top:20px;border-left:3px solid var(--blue);background:var(--blue-wash);padding:14px 18px}
+.verdict .t{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.verdict p{margin:0;font-size:14.5px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+td{padding:6px 0;border-bottom:1px solid var(--rule)}
+td:last-child{text-align:right;font-family:"IBM Plex Mono",monospace;color:var(--ink-2);white-space:nowrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+@media (max-width:620px){
+  .row{grid-template-columns:1fr 88px;gap:8px}
+  .row input[type=range]{grid-column:1/-1}
+  .two{grid-template-columns:1fr;gap:24px}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+
+<header>
+  <div class="eyebrow">System design interview / phase 2</div>
+  <h1>Napkin math trainer</h1>
+  <p class="sub">Set the inputs, predict the outputs in your head, then check. The goal is not the number — it's knowing which dimension dominates, because that dimension is the design.</p>
+</header>
+
+<h2>Inputs</h2>
+<div id="inputs">
+  <div class="row"><label for="s1">Daily active users</label><input type="range" id="s1" min="4" max="9" step="1" value="7"><span class="val" id="o1"></span></div>
+  <div class="row"><label for="s2">Writes / user / day</label><input type="range" id="s2" min="1" max="200" step="1" value="10"><span class="val" id="o2"></span></div>
+  <div class="row"><label for="s3">Read : write ratio</label><input type="range" id="s3" min="1" max="500" step="1" value="100"><span class="val" id="o3"></span></div>
+  <div class="row"><label for="s4">Payload per write</label><input type="range" id="s4" min="1" max="5" step="1" value="2"><span class="val" id="o4"></span></div>
+  <div class="row"><label for="s5">Retention</label><input type="range" id="s5" min="1" max="10" step="1" value="5"><span class="val" id="o5"></span></div>
+  <div class="row"><label for="s6">Peak multiplier</label><input type="range" id="s6" min="2" max="10" step="1" value="3"><span class="val" id="o6"></span></div>
+</div>
+
+<h2>Derived</h2>
+<div class="grid">
+  <div class="cell" id="c-w"><div class="k">Write QPS (avg)</div><div class="n" id="r1">—</div><div class="m" id="m1"></div></div>
+  <div class="cell" id="c-r"><div class="k">Read QPS (avg)</div><div class="n" id="r2">—</div><div class="m" id="m2"></div></div>
+  <div class="cell" id="c-b"><div class="k">Ingest bandwidth</div><div class="n" id="r3">—</div><div class="m" id="m3"></div></div>
+  <div class="cell" id="c-s"><div class="k">Storage at retention</div><div class="n" id="r4">—</div><div class="m" id="m4"></div></div>
+  <div class="cell"><div class="k">Hot cache working set</div><div class="n" id="r5">—</div><div class="m">1 day of reads, 20% hot</div></div>
+  <div class="cell"><div class="k">Shards</div><div class="n" id="r6">—</div><div class="m">2 TB usable per node</div></div>
+</div>
+
+<div class="verdict">
+  <div class="t">What dominates</div>
+  <p id="verdict"></p>
+</div>
+
+<div class="two">
+<div>
+<h2>Constants worth memorizing</h2>
+<table>
+<tr><td>Seconds in a day</td><td>~10<sup>5</sup></td></tr>
+<tr><td>1 M / day</td><td>12 /s</td></tr>
+<tr><td>100 M / day</td><td>1.2 K /s</td></tr>
+<tr><td>1 B / day</td><td>12 K /s</td></tr>
+<tr><td>1 KB × 1 B rows</td><td>1 TB</td></tr>
+<tr><td>Commodity node RAM</td><td>64 GB</td></tr>
+<tr><td>Commodity node SSD</td><td>2 TB</td></tr>
+<tr><td>Single Postgres primary</td><td>5–10 K w/s</td></tr>
+<tr><td>Realistic cache hit rate</td><td>80–95%</td></tr>
+</table>
+</div>
+<div>
+<h2>Latency ladder</h2>
+<table>
+<tr><td>L1 cache</td><td>1 ns</td></tr>
+<tr><td>Main memory</td><td>100 ns</td></tr>
+<tr><td>SSD random read</td><td>16 μs</td></tr>
+<tr><td>1 MB from memory</td><td>3 μs</td></tr>
+<tr><td>1 MB from SSD</td><td>49 μs</td></tr>
+<tr><td>Same-DC round trip</td><td>500 μs</td></tr>
+<tr><td>1 MB from disk</td><td>825 μs</td></tr>
+<tr><td>Disk seek</td><td>2 ms</td></tr>
+<tr><td>CA → Netherlands</td><td>150 ms</td></tr>
+</table>
+</div>
+</div>
+
+<footer>Drill: cover the derived panel, move one slider, say the six numbers out loud, then uncover. Twenty reps and you will never freeze in the first ten minutes of an interview again.</footer>
+
+</div>
+
+<script>
+const DAU = {4:['10 K',1e4],5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const PAY = {1:['1 KB text',1024],2:['10 KB record',10240],3:['100 KB thumb',102400],4:['500 KB image',512000],5:['3 MB media',3145728]};
+const $ = id => document.getElementById(id);
+
+function fmt(n, unit) {
+  const s = ['', 'K', 'M', 'G', 'T', 'P', 'E'];
+  let i = 0;
+  while (Math.abs(n) >= 1000 && i < s.length - 1) { n /= 1000; i++; }
+  const v = n >= 100 ? Math.round(n) : Number(n.toFixed(1));
+  return v.toLocaleString() + ' ' + s[i] + unit;
+}
+
+function compute() {
+  const dau = DAU[$('s1').value], w = +$('s2').value, rw = +$('s3').value;
+  const pay = PAY[$('s4').value], ret = +$('s5').value, pk = +$('s6').value;
+
+  $('o1').textContent = dau[0];
+  $('o2').textContent = w;
+  $('o3').textContent = rw + ' : 1';
+  $('o4').textContent = pay[0];
+  $('o5').textContent = ret + ' yr';
+  $('o6').textContent = pk + '\u00d7';
+
+  const wq = dau[1] * w / 86400;
+  const rq = wq * rw;
+  const bps = wq * pay[1];
+  const perYear = bps * 31536000;
+  const total = perYear * ret;
+  const replicated = total * 3;
+
+  $('r1').textContent = fmt(wq, '');
+  $('m1').textContent = 'peak ' + fmt(wq * pk, '');
+  $('r2').textContent = fmt(rq, '');
+  $('m2').textContent = 'peak ' + fmt(rq * pk, '');
+  $('r3').textContent = fmt(bps * 8, 'bps');
+  $('m3').textContent = fmt(bps, 'B') + ' / s';
+  $('r4').textContent = fmt(total, 'B');
+  $('m4').textContent = '\u00d73 replicas = ' + fmt(replicated, 'B');
+  $('r5').textContent = fmt(rq * 86400 * pay[1] * 0.2, 'B');
+  $('r6').textContent = Math.max(1, Math.ceil(replicated / 2e12)).toLocaleString();
+
+  const scores = {
+    'c-w': wq / 5000,
+    'c-r': rq / 100000,
+    'c-b': bps / 1.25e8,
+    'c-s': replicated / 5e13
+  };
+  const top = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+  Object.keys(scores).forEach(k => $(k).classList.toggle('hot', k === top && scores[top] > 1));
+
+  let v;
+  if (scores[top] <= 1) {
+    v = 'Nothing dominates yet. At this scale one well-indexed primary plus a cache is a legitimate answer — say that out loud. Reaching for shards here is the most common over-engineering tell.';
+  } else if (top === 'c-b') {
+    v = 'Bandwidth and payload dominate. This is a blob-store plus CDN problem: metadata in the database, bytes in object storage, presigned uploads. Never put the object in the row.';
+  } else if (top === 'c-r') {
+    v = 'Reads dominate. The cache tier and read replicas are the design; the write path is almost incidental. Expect the deep dive to be invalidation, hot keys, and stampede protection.';
+  } else if (top === 'c-w') {
+    v = 'Writes dominate. A single leader will not absorb this. Partitioning strategy and a log-structured store are the conversation, and the follow-up will be resharding without downtime.';
+  } else {
+    v = 'Storage dominates. Retention policy, tiering and compaction are the real design, not QPS. Ask whether you are allowed to delete anything — that question alone reads as senior.';
+  }
+  $('verdict').textContent = v;
+}
+
+document.querySelectorAll('input[type=range]').forEach(el => el.addEventListener('input', compute));
+compute();
+</script>
+</body>
+</html>

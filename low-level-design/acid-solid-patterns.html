@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACID, SOLID and design patterns — companion sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+  --red:#9B3226; --red-wash:#F7E9E7;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+    --red:#D98A7E; --red-wash:#241512;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:6px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+h2{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:500;margin:44px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline}
+h2 span{font-size:11px;color:var(--ink-3);letter-spacing:.08em;text-transform:none}
+.lede{color:var(--ink-2);font-size:14px;margin:-4px 0 18px}
+
+.note{border-left:3px solid var(--amber);background:var(--amber-wash);padding:13px 17px;margin:0 0 22px}
+.note p{margin:0;font-size:14px}
+
+/* where tested */
+.wt{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.wt .c{background:var(--panel);padding:13px 15px}
+.wt .co{font-size:14px;font-weight:600}
+.wt .st{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 6px}
+.wt .st.y{color:var(--green)} .wt .st.n{color:var(--ink-3)} .wt .st.m{color:var(--amber)}
+.wt .de{font-size:12.5px;color:var(--ink-2);line-height:1.45}
+
+/* acid */
+.acid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:22px}
+.acid .a{background:var(--panel);padding:15px 17px}
+.acid .ltr{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:600;color:var(--blue);line-height:1}
+.acid .nm{font-size:14px;font-weight:600;margin:4px 0 5px}
+.acid .de{font-size:13px;color:var(--ink-2);line-height:1.5}
+.acid .en{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
+
+/* matrix */
+.mx{width:100%;border-collapse:collapse;font-size:13px}
+.mx th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;padding:0 6px 8px;border-bottom:1px solid var(--rule);text-align:center}
+.mx th:first-child{text-align:left;width:190px}
+.mx td{padding:9px 6px;border-bottom:1px solid var(--rule);text-align:center;font-family:"IBM Plex Mono",monospace;font-size:14px}
+.mx td:first-child{text-align:left;font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500}
+.ok{color:var(--green)} .no{color:var(--red)}
+.mxnote{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+
+/* solid */
+.solid .s{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--rule);align-items:start}
+.solid .l{font-family:"IBM Plex Mono",monospace;font-size:28px;font-weight:600;color:var(--blue);line-height:1}
+.solid .nm{font-size:14.5px;font-weight:600}
+.solid .de{font-size:13.5px;color:var(--ink-2);margin:3px 0 7px}
+.solid .sm{font-size:13px;color:var(--red);background:var(--red-wash);padding:6px 11px;display:inline-block;border-radius:2px}
+.solid .sm b{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;margin-right:7px}
+
+/* patterns */
+.pg{margin-bottom:20px}
+.pgh{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.p{background:var(--panel);padding:12px 14px}
+.p .n{font-size:13.5px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.p .f{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);flex-shrink:0}
+.p .f.hi{color:var(--green)}
+.p .t{font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.45}
+.p .t b{font-weight:500;color:var(--ink)}
+.p.warn{background:var(--amber-wash)}
+
+/* lld flow */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.flow .st{background:var(--panel);padding:12px 14px}
+.flow .num{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--blue);font-weight:600}
+.flow .ti{font-size:13.5px;font-weight:600;margin:3px 0 4px}
+.flow .de{font-size:12px;color:var(--ink-2);line-height:1.45}
+
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{border:1px solid var(--rule);background:var(--panel);padding:7px 12px;font-size:13px;border-radius:2px;
+  display:flex;flex-direction:column;gap:1px}
+.pill em{font-style:normal;font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.pill.core{border-color:var(--green);background:var(--green-wash)}
+
+ul.plain{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
+ul.plain li{margin-bottom:7px}
+ul.plain b{color:var(--ink);font-weight:500}
+footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+@media print{body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="sheet">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+
+<header>
+  <div class="eyebrow">Companion sheet / low-level design round</div>
+  <h1>ACID, SOLID and design patterns</h1>
+  <p class="sub">The material that sits below the distributed system design round. Sized to its real weight in your loop — this is a supporting document, not a second syllabus.</p>
+</header>
+
+<div class="note">
+  <p><b>Calibrate before you invest.</b> At L6/L7 nobody will ask you to recite SOLID. What gets tested is whether your reasoning about class and module boundaries is disciplined when an interviewer says "now show me how you'd structure the service internals." Study these for the reasoning, not the acronym. Budget one to two weeks total, in the final phase of your prep.</p>
+</div>
+
+<h2>Where this is actually tested <span>plan your prep by round, not by topic</span></h2>
+<div class="wt">
+  <div class="c"><div class="co">Google</div><div class="st n">Rarely</div><div class="de">System design plus coding. No dedicated OOD round.</div></div>
+  <div class="c"><div class="co">Meta</div><div class="st n">Rarely</div><div class="de">Product architecture round. Class design almost never surfaces.</div></div>
+  <div class="c"><div class="co">Amazon</div><div class="st m">Sometimes</div><div class="de">OOD can appear inside the design round. Leadership Principles dominate.</div></div>
+  <div class="c"><div class="co">Microsoft, Uber, Atlassian</div><div class="st y">Often</div><div class="de">Dedicated LLD or machine-coding round is common.</div></div>
+  <div class="c"><div class="co">Fintech and enterprise</div><div class="st y">Often</div><div class="de">Where "and like companies" bites. Expect a full LLD round.</div></div>
+  <div class="c"><div class="co">Every company</div><div class="st y">Always</div><div class="de">ACID and isolation levels — these belong to the system design round, not this one.</div></div>
+</div>
+
+<h2>ACID in full <span>the only item here that belongs in the main design round</span></h2>
+<div class="acid">
+  <div class="a"><div class="ltr">A</div><div class="nm">Atomicity</div>
+    <div class="de">All operations in a transaction commit, or none do. Not about concurrency — about abort handling and partial failure.</div>
+    <div class="en">Enforced by: undo log, rollback</div></div>
+  <div class="a"><div class="ltr">C</div><div class="nm">Consistency</div>
+    <div class="de">The application's invariants hold before and after. The weakest letter — it is the app's job, not the database's, and Kleppmann calls it the odd one out.</div>
+    <div class="en">Enforced by: constraints, your code</div></div>
+  <div class="a"><div class="ltr">I</div><div class="nm">Isolation</div>
+    <div class="de">Concurrent transactions behave as if serial. In practice you get a weaker level, and the level you get is a design decision.</div>
+    <div class="en">Enforced by: locks, MVCC, SSI</div></div>
+  <div class="a"><div class="ltr">D</div><div class="nm">Durability</div>
+    <div class="de">Once committed, survives crash. On a single node that means fsync to disk; in a replicated system it means committed to a quorum.</div>
+    <div class="en">Enforced by: WAL, fsync, quorum</div></div>
+</div>
+
+<p class="lede">The interview-relevant part is this matrix. If you can produce it under pressure and say which anomaly your design tolerates, that is a strong signal on its own.</p>
+<table class="mx">
+  <tr><th>Isolation level</th><th>Dirty read</th><th>Lost update</th><th>Non-repeatable read</th><th>Phantom read</th><th>Write skew</th></tr>
+  <tr><td>Read uncommitted</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+  <tr><td>Read committed</td><td class="ok">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+  <tr><td>Repeatable read</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
+  <tr><td>Snapshot isolation</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="no">&#10007;</td></tr>
+  <tr><td>Serializable</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td><td class="ok">&#10003;</td></tr>
+</table>
+<p class="mxnote">&#10003; prevented &nbsp; &#10007; still possible. Level names are not portable across engines — Oracle's "serializable" is snapshot isolation, and MySQL's repeatable read blocks some phantoms. Saying that out loud is a senior signal. <b>Write skew</b> is the one that bites real systems: two transactions each read a valid state, each write, and together they break an invariant no single one violated. It is why on-call scheduling, double-booking and overdraft bugs survive code review.</p>
+
+<h2>SOLID <span>learn the failure mode, not the acronym</span></h2>
+<div class="solid">
+  <div class="s"><div class="l">S</div><div>
+    <div class="nm">Single responsibility</div>
+    <div class="de">A module has one reason to change — meaning one stakeholder or actor who can demand a change to it.</div>
+    <div class="sm"><b>When violated</b>Every feature touches the same class. Merge conflicts, wide blast radius, no safe refactor.</div>
+  </div></div>
+  <div class="s"><div class="l">O</div><div>
+    <div class="nm">Open / closed</div>
+    <div class="de">Open for extension, closed for modification. New behavior arrives as new code, not edits to old code.</div>
+    <div class="sm"><b>When violated</b>Adding one case means editing a switch statement in five files, and you will miss one.</div>
+  </div></div>
+  <div class="s"><div class="l">L</div><div>
+    <div class="nm">Liskov substitution</div>
+    <div class="de">Any subtype must be usable wherever the base type is expected, without the caller knowing.</div>
+    <div class="sm"><b>When violated</b><code>instanceof</code> checks scattered through callers. The abstraction is a lie and everyone works around it.</div>
+  </div></div>
+  <div class="s"><div class="l">I</div><div>
+    <div class="nm">Interface segregation</div>
+    <div class="de">No client should be forced to depend on methods it does not use. Many small interfaces beat one large one.</div>
+    <div class="sm"><b>When violated</b>Fat interfaces and stub implementations that throw <code>UnsupportedOperation</code>.</div>
+  </div></div>
+  <div class="s"><div class="l">D</div><div>
+    <div class="nm">Dependency inversion</div>
+    <div class="de">High-level policy depends on abstractions; details depend on the abstraction too. Wire concretes in at the edge.</div>
+    <div class="sm"><b>When violated</b>Business logic pinned to a vendor SDK. Untestable, and unmigratable when the vendor changes terms.</div>
+  </div></div>
+</div>
+<div class="note" style="margin-top:22px">
+  <p><b>The senior move on SOLID is knowing when not to apply it.</b> Every one of these buys flexibility by adding indirection, and indirection has a permanent readability cost. Adding an interface for a thing with exactly one implementation and no plausible second one is not good design — it is speculative generality. If an interviewer sees you abstract everything reflexively, that reads as junior, not principled. Say the tradeoff out loud: "I'd keep this concrete until there's a second implementation."</p>
+</div>
+
+<h2>Design patterns that actually appear <span>green = high frequency</span></h2>
+
+<div class="pg"><div class="pgh">Creational</div>
+<div class="pcards">
+  <div class="p"><div class="n">Factory / Abstract factory<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> object choice depends on runtime input or config. Parsers, payment providers, notification channels.</div></div>
+  <div class="p"><div class="n">Builder<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> many optional parameters, or an immutable object assembled in steps. Kills telescoping constructors.</div></div>
+  <div class="p warn"><div class="n">Singleton<span class="f">trap</span></div><div class="t"><b>Trigger:</b> asked about it deliberately. Say it is global mutable state, hostile to testing and to concurrency — prefer a single instance managed by a DI container.</div></div>
+  <div class="p"><div class="n">Prototype<span class="f">low</span></div><div class="t"><b>Trigger:</b> cloning an expensive-to-construct object. Rare in interviews.</div></div>
+</div></div>
+
+<div class="pg"><div class="pgh">Structural</div>
+<div class="pcards">
+  <div class="p"><div class="n">Adapter<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> wrapping a third-party or legacy interface so your core does not depend on it. The practical face of dependency inversion.</div></div>
+  <div class="p"><div class="n">Decorator<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> layering behavior without subclass explosion. Retries, caching, logging, auth around a client.</div></div>
+  <div class="p"><div class="n">Facade<span class="f">medium</span></div><div class="t"><b>Trigger:</b> one simple entry point over a messy subsystem. Often the answer to "how do consumers use this?"</div></div>
+  <div class="p"><div class="n">Proxy<span class="f">medium</span></div><div class="t"><b>Trigger:</b> lazy loading, access control, or a remote call behind a local-looking interface.</div></div>
+  <div class="p"><div class="n">Composite<span class="f">medium</span></div><div class="t"><b>Trigger:</b> trees where leaves and branches are treated uniformly. File systems, org charts, nested UI.</div></div>
+  <div class="p"><div class="n">Flyweight<span class="f">low</span></div><div class="t"><b>Trigger:</b> millions of near-identical objects sharing intrinsic state. Chess pieces, game tiles.</div></div>
+</div></div>
+
+<div class="pg"><div class="pgh">Behavioral</div>
+<div class="pcards">
+  <div class="p"><div class="n">Strategy<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> interchangeable algorithms selected at runtime. Pricing rules, eviction policies, matching. The most common correct answer in LLD.</div></div>
+  <div class="p"><div class="n">Observer<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> one-to-many notification within a process. In-process cousin of pub/sub.</div></div>
+  <div class="p"><div class="n">State<span class="f hi">high</span></div><div class="t"><b>Trigger:</b> behavior changes with lifecycle stage. Orders, vending machines, elevators, ticket reservations.</div></div>
+  <div class="p"><div class="n">Command<span class="f">medium</span></div><div class="t"><b>Trigger:</b> operations as objects — undo/redo, queueing, audit log, replay.</div></div>
+  <div class="p"><div class="n">Chain of responsibility<span class="f">medium</span></div><div class="t"><b>Trigger:</b> a request passed along handlers until one takes it. Middleware, validation pipelines, approval flows.</div></div>
+  <div class="p"><div class="n">Template method<span class="f">medium</span></div><div class="t"><b>Trigger:</b> fixed skeleton, variable steps. Prefer composition over inheritance here when you can.</div></div>
+  <div class="p"><div class="n">Iterator<span class="f">low</span></div><div class="t"><b>Trigger:</b> traversal without exposing internals. Mostly language-native now.</div></div>
+  <div class="p"><div class="n">Visitor<span class="f">low</span></div><div class="t"><b>Trigger:</b> new operations over a stable type hierarchy. Compilers, AST work.</div></div>
+</div></div>
+
+<h2>The LLD round framework <span>45 minutes, different shape from system design</span></h2>
+<div class="flow">
+  <div class="st"><div class="num">01</div><div class="ti">Clarify scope</div><div class="de">Which use cases are in, which are explicitly out. Same discipline as system design.</div></div>
+  <div class="st"><div class="num">02</div><div class="ti">Use cases and actors</div><div class="de">List the actors and the operations each performs. This produces your interfaces.</div></div>
+  <div class="st"><div class="num">03</div><div class="ti">Core entities</div><div class="de">Nouns become classes; verbs become methods. Name the invariants each entity owns.</div></div>
+  <div class="st"><div class="num">04</div><div class="ti">Relationships</div><div class="de">Composition over inheritance. Draw the class diagram with cardinalities.</div></div>
+  <div class="st"><div class="num">05</div><div class="ti">Concurrency</div><div class="de">What is shared, what is locked, what is immutable. The most-skipped step and the easiest differentiator.</div></div>
+  <div class="st"><div class="num">06</div><div class="ti">Extension</div><div class="de">"Now add feature X." A good design absorbs it with new classes, not edits.</div></div>
+</div>
+
+<h2>Canonical LLD problems <span>green = do these four first</span></h2>
+<div class="pills">
+  <div class="pill core">Parking lot<em>strategy + state</em></div>
+  <div class="pill core">Elevator system<em>state + scheduling</em></div>
+  <div class="pill core">In-memory LRU cache<em>data structure design</em></div>
+  <div class="pill core">Rate limiter<em>strategy + concurrency</em></div>
+  <div class="pill">Vending machine<em>state machine</em></div>
+  <div class="pill">Chess / tic-tac-toe<em>composite + rules</em></div>
+  <div class="pill">Library management<em>entities + lifecycle</em></div>
+  <div class="pill">ATM<em>state + transactions</em></div>
+  <div class="pill">Splitwise<em>graph + settlement</em></div>
+  <div class="pill">Logging framework<em>chain of responsibility</em></div>
+  <div class="pill">Notification service<em>observer + strategy</em></div>
+  <div class="pill">Deck of cards / BlackJack<em>composition</em></div>
+  <div class="pill">Food delivery<em>state + matching</em></div>
+  <div class="pill">Snake and ladders<em>simple state</em></div>
+</div>
+
+<h2>What gets people dinged in this round</h2>
+<ul class="plain">
+  <li><b>Naming the pattern before naming the problem.</b> "I'll use a factory here" without stating what varies is pattern-matching. Say what varies, then name the pattern that absorbs it.</li>
+  <li><b>Inheritance where composition belongs.</b> Deep hierarchies are the single most common structural mistake, and they fail Liskov almost immediately.</li>
+  <li><b>Ignoring concurrency entirely.</b> Most candidates design as if single-threaded. Naming the shared mutable state and how you protect it is a cheap differentiator.</li>
+  <li><b>Anemic classes.</b> Data holders with getters and setters, and all logic in a service class. That is a database schema wearing an object costume.</li>
+  <li><b>Over-abstracting a 45-minute problem.</b> Six interfaces for a parking lot is not sophistication. Ship the simple version, then say where you would extend.</li>
+  <li><b>No invariants.</b> Every entity should own something it refuses to let you break. If nothing is enforced, the design is decoration.</li>
+</ul>
+
+<footer>Companion to the system design wall chart and cheatsheet. Two weeks in the final phase is the right budget for this — more than that is time taken from mocks, which is where the outcome is actually decided.</footer>
+
+</div>
+</body>
+</html>

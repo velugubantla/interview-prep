@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL tier 05 — Window functions</title>
+<style>
+  :root{
+    --paper:#FBFAF6; --panel:#FFFFFF; --card:#FFFFFF;
+    --ink:#16181C; --muted:#5A6068; --rule:#C3CFD8; --rule2:#D8E4EC;
+    --keep:#2C6E49; --keepbg:#E6F1EA;
+    --drop:#9B3226; --dropbg:#F7E9E7;
+    --mark:#9A6A05; --markbg:#FBF1DC;
+    --hl:#E8F0F6; --numlit:#1F4E79; --trapline:#E5C4BC;
+    --navbg:rgba(251,250,246,.94);
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#12151A; --panel:#171B21; --card:#1C232B;
+      --ink:#E8EAED; --muted:#9BA3AC; --rule:#2A333D; --rule2:#1E252D;
+      --keep:#7FBF9A; --keepbg:#122019;
+      --drop:#D98A7E; --dropbg:#241512;
+      --mark:#D9A441; --markbg:#241D0F;
+      --hl:#16232F; --numlit:#79ACD6; --trapline:#57302A;
+      --navbg:rgba(18,21,26,.94);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:88px}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---- masthead ---- */
+  .mast{padding:56px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;gap:12px;align-items:center;margin:0 0 18px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.8rem,4.4vw,2.8rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.015em}
+  .standfirst{max-width:62ch;color:var(--muted);font-size:1.02rem;margin:0 0 6px}
+  .standfirst strong{color:var(--ink);font-weight:600}
+
+  /* ---- sticky nav ---- */
+  .nav{position:sticky;top:0;z-index:50;background:var(--navbg);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);margin-top:36px}
+  .nav-in{max-width:1080px;margin:0 auto;padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .nav button{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;background:transparent;color:var(--muted);border:1px solid var(--rule);padding:4px 8px;border-radius:2px;transition:.15s;cursor:pointer}
+  .nav button:hover{color:var(--ink);border-color:var(--ink)}
+  .score{margin-left:auto;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .score b{color:var(--keep)}
+
+  /* ---- execution engine ---- */
+  .engine{margin:40px 0 60px;border:1px solid var(--rule);background:var(--panel);border-radius:2px;overflow:hidden}
+  .engine-head{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}
+  .engine-head h2{font-family:var(--mono);font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;margin:0;font-weight:700}
+  .engine-head p{margin:0;font-size:.84rem;color:var(--muted);max-width:52ch}
+  .stages{display:flex;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  .stage{font-family:var(--mono);font-size:.72rem;border:1px solid var(--rule);background:transparent;color:var(--muted);padding:6px 10px;margin:3px 6px 3px 0;cursor:pointer;border-radius:2px;transition:.18s}
+  .stage:hover{border-color:var(--ink);color:var(--ink)}
+  .stage[aria-current="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .stage .n{opacity:.55;margin-right:6px}
+  .engine-body{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+  .pane{padding:20px}
+  .pane+.pane{border-left:1px solid var(--rule)}
+  .pane-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .rowcount{float:right;text-transform:uppercase}
+  .sqlblock{font-family:var(--mono);font-size:.86rem;line-height:1.9;margin:0}
+  .sqlblock .line{padding:1px 8px;border-left:2px solid transparent;transition:.2s;opacity:.42}
+  .sqlblock .line.active{background:var(--hl);border-left-color:var(--mark);opacity:1}
+  .sqlblock .line.done{opacity:.72}
+  .note{margin:20px 0 0;font-size:.86rem;color:var(--muted);min-height:6.2em}
+  .note b{color:var(--ink)}
+  .grid{display:flex;flex-direction:column;gap:3px;min-height:330px}
+  .r{display:grid;grid-template-columns:2.2rem 1fr 4.6rem 5rem;gap:8px;align-items:center;font-family:var(--mono);font-size:.78rem;padding:4px 8px;background:var(--card);border:1px solid var(--rule);border-radius:2px;transition:opacity .35s,transform .35s,background .3s,border-color .3s}
+  .r .id{color:var(--muted);font-size:.7rem}
+  .r .amt{text-align:right}
+  .r .st{color:var(--muted);font-size:.72rem}
+  .r.dropping{background:var(--dropbg);border-color:var(--drop);color:var(--drop);text-decoration:line-through;opacity:.8}
+  .r.entering{opacity:0;transform:translateY(-6px)}
+  .r.agg{background:var(--keepbg);border-color:var(--keep)}
+  .r.agg .amt{color:var(--keep);font-weight:600}
+  .controls{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--rule);flex-wrap:wrap}
+
+  /* ---- shared control buttons ---- */
+  .ctl{font-family:var(--mono);font-size:.73rem;letter-spacing:.05em;background:var(--ink);color:var(--panel);border:1px solid var(--ink);padding:7px 14px;cursor:pointer;border-radius:2px;transition:.18s}
+  .ctl.ghost{background:transparent;color:var(--ink)}
+  .ctl:hover{opacity:.82}
+  .ctl:disabled{opacity:.32;cursor:default}
+  .ctl.on{background:var(--ink);color:var(--panel)}
+  .ctl.off{background:transparent;color:var(--muted);border-color:var(--rule)}
+  .ctl.off:hover{color:var(--ink);border-color:var(--ink)}
+  :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+
+  /* ---- tier sections ---- */
+  .tier{border-top:1px solid var(--rule)}
+  .tier-btn{width:100%;display:grid;grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1.1fr) 1.4rem;gap:16px;align-items:baseline;text-align:left;background:none;border:none;cursor:pointer;padding:22px 4px;font-family:inherit;color:inherit}
+  .tier-btn:hover .tier-name{text-decoration:underline;text-underline-offset:3px}
+  .tier-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .tier-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+  .tier-sub{font-size:.86rem;color:var(--muted)}
+  .chev{font-family:var(--mono);color:var(--muted);transition:transform .2s;justify-self:end}
+  .tier[data-open="true"] .chev{transform:rotate(90deg)}
+  .tier-body{display:none;padding:0 0 40px}
+  .tier[data-open="true"] .tier-body{display:block}
+  .tier-intro{max-width:66ch;font-size:.95rem;color:var(--muted);margin:0 0 28px;padding-left:calc(3.4rem + 16px)}
+  .tier-intro b{color:var(--ink)}
+
+  /* ---- concept cards ---- */
+  .concept{display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:16px;margin-bottom:26px}
+  .c-mark{font-family:var(--mono);font-size:.68rem;color:var(--muted);padding-top:.35em;letter-spacing:.06em}
+  .c-body{min-width:0}
+  .c-title{font-family:var(--mono);font-size:.92rem;font-weight:700;margin:0 0 6px}
+  .c-text{margin:0 0 12px;font-size:.93rem;max-width:64ch}
+  .c-text code{font-family:var(--mono);font-size:.85em;background:var(--hl);padding:1px 4px;border-radius:2px}
+  pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:var(--card);border:1px solid var(--rule);border-left:2px solid var(--ink);padding:12px 14px;overflow-x:auto;margin:0 0 12px;border-radius:2px}
+  .trap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:.87rem;background:var(--dropbg);border:1px solid var(--trapline);border-radius:2px;padding:10px 12px;margin:0 0 12px;max-width:66ch}
+  .trap .lbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--drop);padding-top:.3em}
+  .trap p{margin:0}
+  .kw{color:var(--drop);font-weight:600}
+  .fn{color:var(--keep);font-weight:600}
+  .str{color:var(--mark)}
+  .num{color:var(--numlit)}
+  .cm{color:var(--muted);font-style:italic}
+
+  /* ---- demo shell ---- */
+  .demo{border:1px solid var(--rule);background:var(--panel);border-radius:2px;margin:0 0 16px;overflow:hidden}
+  .demo-head{padding:12px 16px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .demo-head h4{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin:0}
+  .demo-head p{margin:0;font-size:.8rem;color:var(--muted);flex:1;min-width:14ch}
+  .demo-bar{padding:12px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--rule2)}
+  .demo-bar .lab{font-family:var(--mono);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:4px}
+  .demo-main{padding:16px;display:grid;gap:16px}
+  .demo-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .demo-out{font-size:.86rem;color:var(--muted);padding:12px 16px;border-top:1px solid var(--rule2);min-height:3.2em}
+  .demo-out b{color:var(--ink)}
+  .demo-out .verdict{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-right:8px}
+  .v-ok{background:var(--keepbg);color:var(--keep)}
+  .v-bad{background:var(--dropbg);color:var(--drop)}
+  .v-warn{background:var(--markbg);color:var(--mark)}
+
+  /* ---- mini tables ---- */
+  table.t{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;background:var(--card)}
+  table.t th{text-align:left;font-weight:600;color:var(--muted);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--rule)}
+  table.t td{padding:5px 8px;border-bottom:1px solid var(--rule2);transition:background .3s,color .3s,opacity .3s}
+  table.t tr:last-child td{border-bottom:none}
+  table.t tr.keep td{background:var(--keepbg)}
+  table.t tr.drop td{background:var(--dropbg);color:var(--drop);opacity:.75}
+  table.t tr.dim td{opacity:.34}
+  table.t tr.hot td{background:var(--markbg)}
+  table.t tr.win td{background:var(--keepbg);box-shadow:inset 2px 0 0 var(--keep)}
+  table.t tr.cur td{background:var(--markbg);box-shadow:inset 2px 0 0 var(--mark);font-weight:600}
+  table.t tr.enter td{opacity:0}
+  table.t td.num{text-align:right}
+  .tcap{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .tbox{border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+
+  /* ---- grid canvas (index demo) ---- */
+  .cells{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--rule2);border-radius:1px;transition:background .12s,border-color .12s}
+  .cell.read{background:var(--markbg);border-color:var(--mark)}
+  .cell.hit{background:var(--keep);border-color:var(--keep)}
+
+  /* ---- tree (recursive demo) ---- */
+  .tree{display:flex;flex-direction:column;gap:10px}
+  .lvl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .lvl .lname{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);width:5.4rem;flex-shrink:0}
+  .node{font-family:var(--mono);font-size:.74rem;border:1px solid var(--rule);background:var(--card);color:var(--muted);padding:4px 9px;border-radius:2px;transition:.3s;opacity:.45}
+  .node.on{opacity:1;background:var(--keepbg);border-color:var(--keep);color:var(--keep);font-weight:600}
+  .node.new{background:var(--markbg);border-color:var(--mark);color:var(--mark);opacity:1;font-weight:600}
+
+  /* ---- sessions (txn demo) ---- */
+  .sessions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sess{border:1px solid var(--rule);border-radius:2px;background:var(--card);overflow:hidden}
+  .sess h5{margin:0;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--rule2);color:var(--muted)}
+  .sess ol{margin:0;padding:8px 10px 10px 26px;font-family:var(--mono);font-size:.75rem;line-height:1.8}
+  .sess li{color:var(--muted);opacity:.4;transition:.25s;padding-left:2px}
+  .sess li.on{opacity:1;color:var(--ink)}
+  .sess li.now{opacity:1;color:var(--ink);background:var(--markbg)}
+  .balance{font-family:var(--mono);font-size:.8rem;text-align:center;padding:10px;border:1px solid var(--rule);background:var(--card);border-radius:2px}
+  .balance b{font-size:1.4rem;display:block;margin-top:2px}
+
+  /* ---- quiz ---- */
+  .quiz{margin-top:34px;padding-left:calc(3.4rem + 16px)}
+  .quiz-h{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;display:flex;gap:10px;align-items:center}
+  .quiz-h::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .q{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:16px;margin-bottom:12px}
+  .q-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;color:var(--muted)}
+  .q-text{margin:6px 0 12px;font-size:.93rem;max-width:66ch}
+  .q pre.code{background:var(--panel)}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.88rem;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:9px 12px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:flex-start}
+  .opt:hover{border-color:var(--ink)}
+  .opt .tick{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex-shrink:0;padding-top:.1em}
+  .opt.right{background:var(--keepbg);border-color:var(--keep)}
+  .opt.right .tick{color:var(--keep)}
+  .opt.wrong{background:var(--dropbg);border-color:var(--drop)}
+  .opt.wrong .tick{color:var(--drop)}
+  .opt.locked{cursor:default}
+  .why{margin:12px 0 0;font-size:.87rem;color:var(--muted);border-left:2px solid var(--mark);padding-left:12px;display:none}
+  .why.show{display:block}
+  .why b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--rule);margin-top:20px;padding:32px 0 90px;font-size:.86rem;color:var(--muted);max-width:66ch}
+  footer b{color:var(--ink)}
+
+  @media (max-width:860px){
+    .engine-body,.demo-2col,.sessions{grid-template-columns:1fr}
+    .pane+.pane{border-left:none;border-top:1px solid var(--rule)}
+    .tier-btn{grid-template-columns:2.6rem minmax(0,1fr) 1.2rem}
+    .tier-sub{display:none}
+    .tier-intro,.quiz{padding-left:0}
+    .concept{grid-template-columns:1fr;gap:4px}
+    .cells{grid-template-columns:repeat(8,1fr)}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+
+  .backlink{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--muted);text-decoration:none;border:1px solid var(--rule);padding:5px 10px;border-radius:2px;display:inline-block;transition:.15s}
+  .backlink:hover{color:var(--ink);border-color:var(--ink)}
+  .pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--rule);margin-top:24px;padding:24px 0 90px}
+  .pager a{font-family:var(--mono);font-size:.75rem;color:var(--ink);text-decoration:none;border:1px solid var(--rule);padding:8px 14px;border-radius:2px;transition:.15s}
+  .pager a:hover{border-color:var(--ink);background:var(--panel)}
+  .pager .sp{flex:1}
+  .cards{border-top:1px solid var(--rule);margin-top:8px}
+  .card{display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:16px;align-items:baseline;
+        padding:20px 4px;border-bottom:1px solid var(--rule);text-decoration:none;color:inherit;transition:.15s}
+  .card:hover{background:var(--panel)}
+  .card:hover .card-name{text-decoration:underline;text-underline-offset:3px}
+  .card-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .card-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em;display:block}
+  .card-sub{font-size:.87rem;color:var(--muted);display:block;margin-top:2px}
+  .card-meta{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--muted);text-align:right;white-space:nowrap}
+  @media (max-width:860px){ .card{grid-template-columns:2.6rem minmax(0,1fr)} .card-meta{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap mast">
+  <p class="eyebrow"><a class="backlink" href="../index.html">&larr; Interview Prep home</a> <a class="backlink" href="index.html">&larr; all tiers</a></p>
+  <h1><span style="color:var(--muted)">05</span><br>Window functions</h1>
+  <p class="standfirst">The real intermediate to advanced line &mdash; 6 concepts, 2 demo(s), 4 problems.
+     <span class="score" id="scorebox" style="margin-left:0"></span></p>
+</div>
+<div class="wrap"><div id="main"></div></div>
+<div class="wrap"><div class="pager"><a href="tier-04.html">&larr; 04 &nbsp;Composition</a><span class="sp"></span><a href="tier-06.html">06 &nbsp;Writing and modeling &rarr;</a></div></div>
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const KW = new Set(('select from where group by having order limit offset join left right full inner outer cross on as and or not in is null distinct union all intersect except with recursive case when then else end over partition rows range groups between preceding following unbounded current row insert into values update set delete create table view materialized index merge using matched conflict do nothing returning begin commit rollback lateral exists asc desc fetch next only qualify filter grouping sets rollup cube explain analyze primary key foreign references unique check constraint default cast interval date timestamp timestamptz if for of level isolation read committed repeatable serializable unnest apply top nulls first last ilike like window add column temporary drop alter serial int text boolean numeric true false unknown').split(' '));
+const FNS = new Set(('sum count avg min max coalesce nullif row_number rank dense_rank ntile lag lead first_value last_value date_trunc extract array_agg string_agg listagg generate_series abs round concat greatest least now current_date current_timestamp length upper lower trim').split(' '));
+
+function hl(sql){
+  const re = /(--[^\n]*)|('(?:''|[^'])*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([\s\S])/g;
+  let out = '', m;
+  while ((m = re.exec(sql)) !== null){
+    if (m[1]) out += '<span class="cm">'+esc(m[1])+'</span>';
+    else if (m[2]) out += '<span class="str">'+esc(m[2])+'</span>';
+    else if (m[3]) out += '<span class="num">'+m[3]+'</span>';
+    else if (m[4]){
+      const w = m[4], lw = w.toLowerCase();
+      if (KW.has(lw)) out += '<span class="kw">'+esc(w)+'</span>';
+      else if (FNS.has(lw)) out += '<span class="fn">'+esc(w)+'</span>';
+      else out += esc(w);
+    }
+    else out += esc(m[5]);
+  }
+  return out;
+}
+const code = sql => '<pre class="code">'+hl(sql)+'</pre>';
+
+/* mini table renderer. rows = [{cells:[...], cls:'keep|drop|dim|hot|win|cur'}] */
+function tbl(cols, rows, caption){
+  let h = '';
+  if (caption) h += '<p class="tcap">'+esc(caption)+'</p>';
+  h += '<div class="tbox"><table class="t"><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+'</th>');
+  h += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    h += '<tr class="'+(r.cls||'')+'">';
+    r.cells.forEach((c,i) => {
+      const isNum = typeof c === 'number';
+      h += '<td class="'+(isNum?'num':'')+'">'+(c===null?'<span class="cm">NULL</span>':esc(c))+'</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+function btnRow(label, items, onPick, startIdx){
+  const wrap = document.createElement('div');
+  wrap.className = 'demo-bar';
+  if (label) wrap.innerHTML = '<span class="lab">'+esc(label)+'</span>';
+  const btns = items.map((it,i) => {
+    const b = document.createElement('button');
+    b.className = 'ctl ' + (i===startIdx ? 'on':'off');
+    b.textContent = it;
+    b.onclick = () => { btns.forEach((x,j)=> x.className='ctl '+(j===i?'on':'off')); onPick(i); };
+    wrap.appendChild(b);
+    return b;
+  });
+  return wrap;
+}
+
+/* ============================================================
+   DEMO FRAMEWORK
+   ============================================================ */
+function demoShell(host, title, blurb){
+  host.className = 'demo';
+  host.innerHTML = '<div class="demo-head"><h4>'+esc(title)+'</h4><p>'+blurb+'</p></div>'
+    + '<div class="bars"></div><div class="demo-main"></div><div class="demo-out"></div>';
+  return {bars:host.querySelector('.bars'), main:host.querySelector('.demo-main'), out:host.querySelector('.demo-out')};
+}
+const V = (k,t) => '<span class="verdict v-'+k+'">'+t+'</span>';
+const DEMOS = {};
+/* ---------- 7. Ranking on ties ---------- */
+DEMOS.ranking = {
+  title:'Four ways to number rows', blurb:'They agree until there is a tie. Then they disagree permanently.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const d=[['Ana',95],['Ben',88],['Cara',88],['Dev',75],['Eve',75],['Finn',75],['Gus',60]];
+    const rn=[1,2,3,4,5,6,7], rk=[1,2,2,4,4,4,7], dr=[1,2,2,3,3,3,4], nt=[1,1,1,2,2,3,3];
+    const fns=[
+      {n:'ROW_NUMBER()',v:rn,why:'Always 1..n with no gaps and no ties. Arbitrary tie-breaking — Ben and Cara could swap between runs unless you add a deterministic tiebreaker to the ORDER BY. This is the one to use for deduplication.'},
+      {n:'RANK()',v:rk,why:'Ties share a rank, and the next rank <b>skips</b>. Three people tied at 75 occupy positions 4, 5, 6, so the next value is 7. Competition-style ranking.'},
+      {n:'DENSE_RANK()',v:dr,why:'Ties share a rank and the next rank does <b>not</b> skip. Use it when you want "the third-highest distinct score", not "the third-place person".'},
+      {n:'NTILE(3)',v:nt,why:'Splits into 3 buckets as evenly as possible; remainder goes to the earlier buckets, so bucket 1 gets 3 rows and the others 2. Note it will <b>split a tie across buckets</b> — Dev and Eve are in bucket 2, Finn in 3, all with score 75.'}
+    ];
+    let cur=0;
+    const draw=()=>{
+      const f=fns[cur];
+      const body=d.map((r,i)=>({cells:[r[0],r[1],f.v[i]], cls:(i>0&&d[i-1][1]===r[1])||(i<6&&d[i+1][1]===r[1])?'hot':''}));
+      s.main.className='demo-main';
+      s.main.innerHTML=code('SELECT name, score,\n       '+f.n+' OVER (ORDER BY score DESC) AS pos\nFROM scores;')
+        +tbl(['name','score',f.n],body);
+      s.out.innerHTML=V('ok',f.n)+f.why+' Tied rows are highlighted.';
+    };
+    s.bars.appendChild(btnRow('Function',fns.map(f=>f.n),i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+/* ---------- 8. Window frames ---------- */
+DEMOS.frames = {
+  title:'Frame explorer — the part everyone skips', blurb:'Click any row to make it the current row. Watch which rows enter the window.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const d=[[1,10],[2,20],[2,30],[3,40],[4,50],[4,60],[4,70],[5,80]];
+    const modes=['ROWS','RANGE'];
+    const starts=[['UNBOUNDED PRECEDING','U'],['2 PRECEDING','P'],['CURRENT ROW','C']];
+    const ends=[['CURRENT ROW','C'],['1 FOLLOWING','F'],['UNBOUNDED FOLLOWING','U']];
+    let mode=0, st=0, en=0, cur=4;
+    const inWin=(i)=>{
+      const n=d.length, day=d[cur][0];
+      if(modes[mode]==='ROWS'){
+        const a = starts[st][1]==='U'?0 : starts[st][1]==='P'?Math.max(0,cur-2) : cur;
+        const b = ends[en][1]==='C'?cur : ends[en][1]==='F'?Math.min(n-1,cur+1) : n-1;
+        return i>=a && i<=b;
+      }
+      const lo = starts[st][1]==='U'?-Infinity : starts[st][1]==='P'?day-2 : day;
+      const hi = ends[en][1]==='C'?day : ends[en][1]==='F'?day+1 : Infinity;
+      return d[i][0]>=lo && d[i][0]<=hi;
+    };
+    const draw=()=>{
+      const win=d.map((_,i)=>inWin(i));
+      const sum=d.filter((_,i)=>win[i]).reduce((n,r)=>n+r[1],0);
+      const body=d.map((r,i)=>({cells:[i+1,r[0],r[1], win[i]?'in':''], cls: i===cur?'cur':(win[i]?'win':'dim')}));
+      s.main.className='demo-main demo-2col';
+      s.main.innerHTML='<div>'+code('SELECT day, val,\n       SUM(val) OVER (\n         ORDER BY day\n         '+modes[mode]+' BETWEEN '+starts[st][0]+'\n              AND '+ends[en][0]+'\n       ) AS windowed\nFROM t;')
+        +'<div class="balance">window SUM for the current row<b>'+sum+'</b></div></div>'
+        +'<div>'+tbl(['#','day','val','frame'],body,'click a row to move the current row')+'</div>';
+      s.main.querySelectorAll('tbody tr').forEach((tr,i)=>{tr.style.cursor='pointer';tr.onclick=()=>{cur=i;draw();};});
+      const tied = d.filter(r=>r[0]===d[cur][0]).length>1;
+      s.out.innerHTML = modes[mode]==='RANGE' && tied
+        ? V('warn','RANGE + ties')+'RANGE frames are defined by <b>values of the ORDER BY column</b>, not positions. Day '+d[cur][0]+' has peers, so all of them enter or leave the window together. This is why a "running total" written with the default frame jumps in steps instead of row by row.'
+        : modes[mode]==='RANGE'
+        ? V('ok','RANGE')+'With no peers at this value, RANGE and ROWS coincide — which is exactly why this bug survives testing on clean data and appears in production.'
+        : V('ok','ROWS')+'ROWS counts physical rows before and after the current one, regardless of ties. Deterministic, and almost always what people actually mean by "last 3 rows".';
+    };
+    s.bars.appendChild(btnRow('Mode',modes,i=>{mode=i;draw();},0));
+    s.bars.appendChild(btnRow('Frame start',starts.map(x=>x[0]),i=>{st=i;draw();},0));
+    s.bars.appendChild(btnRow('Frame end',ends.map(x=>x[0]),i=>{en=i;draw();},0));
+    draw();
+  }
+};
+
+const TIER = {"n": "05", "name": "Window functions", "sub": "The real intermediate to advanced line", "intro": "GROUP BY answers \"what is the total per region\" by destroying the rows. Window functions answer \"what is this row's share of its region's total\" by <b>keeping</b> them. Everything below is one idea \u2014 compute across a set of rows without collapsing them \u2014 plus one detail almost nobody learns: the frame.", "concepts": [{"t": "The anatomy of OVER", "b": "<code>PARTITION BY</code> is the grouping. <code>ORDER BY</code> inside OVER is the ordering <i>within</i> each partition and has nothing to do with the query's final ORDER BY. Omit PARTITION BY and the whole result is one partition. The number of output rows never changes.", "sql": "SELECT order_id, region, amount,\n       SUM(amount)  OVER (PARTITION BY region)               AS region_total,\n       amount * 1.0 / SUM(amount) OVER (PARTITION BY region) AS share,\n       SUM(amount)  OVER (PARTITION BY region ORDER BY ts)   AS running\nFROM orders;"}, {"t": "Ranking: four functions, one tie", "b": "They agree on distinct values and diverge the moment there is a tie \u2014 which is exactly when it matters. ROW_NUMBER is arbitrary among ties unless you add a deterministic tiebreaker.", "demo": "ranking"}, {"t": "Offsets: LAG, LEAD, FIRST_VALUE, LAST_VALUE", "b": "<code>LAG(x, 1, default)</code> reaches backwards within the partition, <code>LEAD</code> forwards. These are how you do period-over-period, deltas, and \"time since previous event\" without a self-join. <code>LAST_VALUE</code> has a notorious gotcha covered below.", "sql": "SELECT day, revenue,\n       LAG(revenue) OVER (ORDER BY day)                     AS prev_day,\n       revenue - LAG(revenue) OVER (ORDER BY day)           AS delta,\n       LAG(revenue, 7) OVER (ORDER BY day)                  AS same_day_last_week\nFROM daily;"}, {"t": "Frames \u2014 the part everyone skips", "b": "When you add <code>ORDER BY</code> inside OVER without a frame clause, the default frame is <code>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>. RANGE is defined by <b>values</b>, so all rows tied on the ORDER BY key enter the window together. ROWS is defined by <b>positions</b>. On data without ties they are identical \u2014 which is why this bug survives testing.", "demo": "frames", "trap": "<code>LAST_VALUE(x) OVER (ORDER BY ts)</code> returns the current row, not the last row, because the default frame ends at CURRENT ROW. Fix it with an explicit <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>, or use <code>FIRST_VALUE</code> with the order reversed."}, {"t": "Filtering on a window result", "b": "Window functions run at stage 5.5 \u2014 after HAVING, before ORDER BY \u2014 so you cannot reference them in WHERE. Wrap the query and filter outside, or use <code>QUALIFY</code> where it exists (Snowflake, BigQuery, Databricks, Teradata).", "sql": "-- portable\nSELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ts DESC) rn\n  FROM orders\n) t WHERE rn = 1;\n\n-- same thing, engines with QUALIFY\nSELECT * FROM orders\nQUALIFY ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ts DESC) = 1;"}, {"t": "The pattern library", "b": "<b>Deduplicate</b>: ROW_NUMBER over the key, keep rn = 1. <b>Top-N per group</b>: same shape, keep rn \u2264 N. <b>Gaps and islands</b>: subtract ROW_NUMBER from a sequence \u2014 consecutive runs share a constant difference, so you can group by it. <b>Sessionization</b>: flag a new session when LAG gap exceeds a threshold, then take a running SUM of the flag as the session id. <b>Percent of total</b>: divide by an unpartitioned SUM OVER ().", "sql": "-- sessionization\nSELECT user_id, ts,\n  SUM(new_session) OVER (PARTITION BY user_id ORDER BY ts) AS session_id\nFROM (\n  SELECT user_id, ts,\n    CASE WHEN ts - LAG(ts) OVER (PARTITION BY user_id ORDER BY ts)\n              > interval '30 minutes' THEN 1 ELSE 0 END AS new_session\n  FROM events\n) t;"}], "quiz": [{"q": "Scores in descending order: 95, 88, 88, 75, 75, 75, 60. What is <code>RANK()</code> for the row with score 60?", "opts": ["4", "5", "7", "6"], "a": 2, "why": "RANK skips: the three rows tied at 75 occupy positions 4, 5 and 6, so the next rank is 7. DENSE_RANK would give 4. ROW_NUMBER would give 7 as well, but for a different reason \u2014 it never ties in the first place."}, {"q": "With <code>ORDER BY day</code> inside OVER and no explicit frame clause, what is the default frame?", "opts": ["ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW", "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW", "The entire partition", "ROWS BETWEEN 1 PRECEDING AND CURRENT ROW"], "a": 1, "why": "RANGE, not ROWS. With duplicate day values, all peers enter the window at once, so a \"running total\" jumps in steps and every tied row shows the same value. With no ORDER BY at all the default is the entire partition. Write <code>ROWS</code> explicitly whenever you mean physical rows."}, {"q": "<code>LAST_VALUE(price) OVER (PARTITION BY sku ORDER BY ts)</code> returns the current row's price on every row. Why?", "opts": ["LAST_VALUE is not supported with PARTITION BY", "The default frame ends at CURRENT ROW, so the last row in frame is the current row", "You need DISTINCT", "ORDER BY must be DESC"], "a": 1, "why": "The frame, not the function, is the problem. Add <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>, or reverse the order and use FIRST_VALUE. This is the single most reported \"window functions are broken\" bug, and it is always the frame."}, {"q": "You need the most recent order per customer, keeping all columns. Best approach?", "opts": ["GROUP BY customer_id with MAX(ts)", "ROW_NUMBER over (PARTITION BY customer_id ORDER BY ts DESC), keep rn = 1", "SELECT DISTINCT ON with ORDER BY", "B, or C on Postgres"], "a": 3, "why": "GROUP BY gives you the max timestamp but not the rest of that row \u2014 joining back on (customer_id, ts) reintroduces duplicates whenever two orders share a timestamp. ROW_NUMBER is the portable answer; Postgres's <code>DISTINCT ON</code> is a concise equivalent. Add a unique tiebreaker to the ORDER BY either way."}]};
+/* ============================================================
+   SINGLE-TIER PAGE RENDERER
+   ============================================================ */
+(function(){
+  const t = TIER;
+  const main = document.getElementById('main');
+  let solved = 0;
+
+  let body = '<p class="tier-intro">'+t.intro+'</p>';
+  t.concepts.forEach((c,ci)=>{
+    body += '<div class="concept"><div class="c-mark">'+t.n+'.'+String(ci+1).padStart(2,'0')+'</div><div class="c-body">'
+      + '<p class="c-title">'+esc(c.t)+'</p><p class="c-text">'+c.b+'</p>'
+      + (c.sql ? code(c.sql) : '')
+      + (c.trap ? '<div class="trap"><span class="lbl">trap</span><p>'+c.trap+'</p></div>' : '')
+      + (c.demo ? '<div class="demo" data-demo="'+c.demo+'"></div>' : '')
+      + '</div></div>';
+  });
+
+  body += '<div class="quiz"><p class="quiz-h">Problems · tier '+t.n+'</p>';
+  t.quiz.forEach((q,qi)=>{
+    body += '<div class="q" data-q="'+qi+'">'
+      + '<p class="q-num">'+t.n+' · problem '+(qi+1)+'</p>'
+      + '<p class="q-text">'+q.q+'</p>'
+      + (q.sql ? code(q.sql) : '')
+      + '<div class="opts">'
+      + q.opts.map((o,oi)=>'<button class="opt" data-o="'+oi+'"><span class="tick">'+String.fromCharCode(65+oi)+'</span><span>'+o+'</span></button>').join('')
+      + '</div><p class="why"></p></div>';
+  });
+  body += '</div>';
+  main.innerHTML = body;
+
+  main.querySelectorAll('[data-demo]').forEach(host=>{
+    const d = DEMOS[host.dataset.demo];
+    if(!d) return;
+    try { d.build(host); }
+    catch(e){ host.innerHTML = '<div class="demo-out">This demo failed to load.</div>'; }
+  });
+
+  const sc = document.getElementById('scorebox');
+  const setScore = () => { sc.innerHTML = 'solved <b>'+solved+'</b> / '+t.quiz.length; };
+  setScore();
+
+  main.addEventListener('click', ev=>{
+    const opt = ev.target.closest('.opt'); if(!opt) return;
+    const qEl = opt.closest('.q'); if(qEl.dataset.done) return;
+    const q = t.quiz[+qEl.dataset.q], picked = +opt.dataset.o;
+    qEl.dataset.done = '1';
+    qEl.querySelectorAll('.opt').forEach((b,i)=>{
+      b.classList.add('locked');
+      if(i===q.a) b.classList.add('right');
+      else if(i===picked) b.classList.add('wrong');
+      b.querySelector('.tick').textContent = i===q.a ? '✓' : (i===picked ? '✕' : String.fromCharCode(65+i));
+    });
+    const why = qEl.querySelector('.why');
+    why.innerHTML = (picked===q.a ? '<b>Correct.</b> ' : '<b>Not quite.</b> ') + q.why;
+    why.classList.add('show');
+    if(picked===q.a){ solved++; setScore(); }
+  });
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview Prep — home</title>
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+  --purple:#5B3E8C; --purple-wash:#EEE9F6;
+  --red:#9B3226; --red-wash:#F7E9E7;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+    --purple:#B49FDC; --purple-wash:#1E1828;
+    --red:#D98A7E; --red-wash:#241512;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1060px;margin:0 auto;padding:44px 24px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:36px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:var(--mono);font-size:30px;font-weight:600;margin:6px 0 6px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14.5px;margin:0;max-width:64ch}
+
+.cat{margin-bottom:40px}
+.cat-head{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--rule);padding-bottom:7px;margin-bottom:14px}
+.cat-name{font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+.cat-count{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+a.card{display:block;background:var(--panel);border:1px solid var(--rule);border-radius:4px;
+  padding:15px 17px;text-decoration:none;color:var(--ink);transition:border-color .15s,transform .15s}
+a.card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.card .t{font-size:15px;font-weight:600;margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card .d{font-size:13px;color:var(--ink-2);margin:0;line-height:1.5}
+.kind{flex-shrink:0;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 7px;border-radius:2px;font-weight:500}
+.kind.reference{background:var(--blue-wash);color:var(--blue)}
+.kind.interactive{background:var(--green-wash);color:var(--green)}
+.kind.drill{background:var(--amber-wash);color:var(--amber)}
+.kind.course{background:var(--purple-wash);color:var(--purple)}
+.kind.bank{background:var(--red-wash);color:var(--red)}
+
+footer{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3);line-height:1.7}
+footer code{font-family:var(--mono);font-size:.9em;background:var(--blue-wash);padding:1px 5px;border-radius:2px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <div class="eyebrow">Daily starting point</div>
+  <h1>Interview Prep</h1>
+  <p class="sub">Every reference, drill and interactive demo in one place. Tags: <b>reference</b> = read, <b>drill</b> = practice against, <b>interactive</b> = explore a concept, <b>course</b> = multi-page, <b>bank</b> = question bank.</p>
+</header>
+
+<div id="root"></div>
+
+<footer>
+  <b>Adding pages:</b> drop the file into the matching category folder (<code>sql\</code>, <code>system-design\</code>, <code>low-level-design\</code>, <code>ai-agents\</code> — or a new folder for a new category), then ask Claude to add it to the list in this file, or add one line to the <code>CATEGORIES</code> array yourself. Future sections planned: Behavioral, Data Structures, Algorithms, Graphs.
+</footer>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE MANIFEST — this array IS the landing page.
+
+   TO ADD A PAGE:      add one { title, file, desc, kind } line to a category.
+   TO ADD A CATEGORY:  copy a { name, items:[...] } block. Order here = order on page.
+
+   Fields:
+     title : card heading
+     file  : path relative to this index.html (use forward slashes)
+     desc  : one-line description shown on the card
+     kind  : "reference" | "interactive" | "drill" | "course"  (colors the tag)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const CATEGORIES = [
+
+  { name: "System Design", items: [
+    { title: "Master reference",        file: "system-design/master-reference.html",       desc: "The full syllabus in one long page — concepts, drills and progress tracking.", kind: "reference" },
+    { title: "Master cheatsheet",       file: "system-design/cheatsheet.html",             desc: "Grading signals, the 45-min clock, numbers to know cold, canonical problems, tradeoffs, phased plan.", kind: "reference" },
+    { title: "Wall chart",              file: "system-design/wall-chart.html",             desc: "Everything that gets graded on one page, with checkboxes that persist. Check off what you genuinely own.", kind: "reference" },
+    { title: "Interactive demos (all four)", file: "system-design/interactive-demos.html", desc: "Clock, estimation, fan-out and quorum in one page, with drill mode that blurs answers until you commit.", kind: "interactive" },
+    { title: "45-minute clock",         file: "system-design/forty-five-minute-clock.html", desc: "Seven interview phases sized by real minutes — what to produce in each, and how each is failed.", kind: "drill" },
+    { title: "Capacity estimator",      file: "system-design/capacity-estimator.html",     desc: "DAU → QPS, bandwidth, storage, cache, shards. Says which dimension dominates the design.", kind: "drill" },
+    { title: "Napkin math trainer",     file: "system-design/napkin-math-trainer.html",    desc: "Same estimator plus memorization tables — cover the outputs, predict, then check.", kind: "drill" },
+    { title: "Fan-out crossover",       file: "system-design/fanout-crossover.html",       desc: "Fan-out on write vs read — the most-asked tradeoff, and where the celebrity regime breaks it.", kind: "interactive" },
+    { title: "Quorum tuner",            file: "system-design/quorum-tuner.html",           desc: "W + R > N made visible — drag until the sets stop overlapping and see what you lose.", kind: "interactive" },
+  ]},
+
+  { name: "SQL", items: [
+    { title: "SQL — the full map",      file: "sql/index.html",                            desc: "The complete course: ten tiers from mental models to production SQL.", kind: "course" },
+    { title: "SQL with working parts",  file: "sql/sql-course.html",                       desc: "Single-page version of the course with the live execution engine.", kind: "course" },
+    { title: "Window frames: ROWS vs RANGE", file: "sql/window-frame-rows-vs-range.html",  desc: "Why running totals jump in steps on tied values — and why the bug survives testing on clean data.", kind: "interactive" },
+  ]},
+
+  { name: "Low-Level Design", items: [
+    { title: "ACID, SOLID & design patterns", file: "low-level-design/acid-solid-patterns.html", desc: "Isolation-level matrix, SOLID failure modes, the patterns that actually appear, and the LLD round framework.", kind: "reference" },
+  ]},
+
+  { name: "AI & Agents", items: [
+    { title: "Loop engineering simulator", file: "ai-agents/loop-engineering-simulator.html", desc: "The agent loop running live — verify, terminate, recover, govern. Three scenarios including the breaker trip.", kind: "interactive" },
+  ]},
+
+  /* Question banks per role — future role banks (e.g. Behavioral, Analytics Engineer) get one line each here. */
+  { name: "Question Banks", items: [
+    { title: "DA / DE — 2-hour interview bank", file: "question-banks/interview-bank.html", desc: "Interactive guided flow: clickable 2-hour timeline, reveal-style question cards with answers and red flags, rubric, and progress tracking.", kind: "bank" },
+    { title: "DA / DE — master question repository", file: "question-banks/master-question-repository.html", desc: "Interactive explorer for all 557 questions: flashcard reveal, domain/priority/DA-DE filters, search, progress bars, and the timed 25-question self-test.", kind: "bank" },
+  ]},
+
+  /* ── Future categories: uncomment and fill when the files exist. ──
+  { name: "Behavioral", items: [
+    { title: "", file: "behavioral/", desc: "", kind: "reference" },
+  ]},
+  { name: "Data Structures", items: [
+    { title: "", file: "data-structures/", desc: "", kind: "reference" },
+  ]},
+  { name: "Algorithms", items: [
+    { title: "", file: "algorithms/", desc: "", kind: "reference" },
+  ]},
+  { name: "Graphs", items: [
+    { title: "", file: "graphs/", desc: "", kind: "reference" },
+  ]},
+  ─────────────────────────────────────────────────────────────────── */
+];
+
+const root = document.getElementById("root");
+CATEGORIES.forEach(cat => {
+  const sec = document.createElement("section");
+  sec.className = "cat";
+  const cards = cat.items.map(it =>
+    '<a class="card" href="' + it.file + '">' +
+      '<div class="t"><span>' + it.title + '</span><span class="kind ' + it.kind + '">' + it.kind + '</span></div>' +
+      '<p class="d">' + it.desc + '</p>' +
+    '</a>').join("");
+  sec.innerHTML =
+    '<div class="cat-head"><span class="cat-name">' + cat.name + '</span>' +
+    '<span class="cat-count">' + cat.items.length + (cat.items.length === 1 ? ' page' : ' pages') + '</span></div>' +
+    '<div class="cards">' + cards + '</div>';
+  root.appendChild(sec);
+});
+</script>
+</body>
+</html>

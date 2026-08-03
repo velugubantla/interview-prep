@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Window frames — ROWS vs RANGE</title>
+<style>
+/* ── Shell added to make this Claude artifact fragment standalone. Original content untouched below. ── */
+:root{
+  --paper:#FBFAF6; --surface-1:#FFFFFF;
+  --border:#C3CFD8; --border-strong:#8A9099;
+  --text-primary:#16181C; --text-secondary:#5A6068; --text-muted:#8A9099;
+  --bg-accent:#E8F0F6; --text-accent:#1F4E79; --border-accent:#1F4E79;
+  --fill-accent:#1F4E79; --on-accent:#FFFFFF;
+  --bg-warning:#FBF1DC; --text-warning:#9A6A05; --border-warning:#9A6A05;
+  --bg-success:#E6F1EA; --text-success:#2C6E49; --border-success:#2C6E49;
+  --bg-danger:#F7E9E7; --text-danger:#9B3226;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --surface-1:#171B21;
+    --border:#2A333D; --border-strong:#6C747D;
+    --text-primary:#E8EAED; --text-secondary:#9BA3AC; --text-muted:#6C747D;
+    --bg-accent:#16232F; --text-accent:#79ACD6; --border-accent:#79ACD6;
+    --fill-accent:#79ACD6; --on-accent:#12151A;
+    --bg-warning:#241D0F; --text-warning:#D9A441; --border-warning:#D9A441;
+    --bg-success:#122019; --text-success:#7FBF9A; --border-success:#7FBF9A;
+    --bg-danger:#241512; --text-danger:#D98A7E;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text-primary);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6}
+.shell-wrap{max-width:880px;margin:0 auto;padding:36px 22px 72px}
+.shell-head{border-bottom:2px solid var(--text-primary);padding-bottom:14px;margin-bottom:8px}
+.shell-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.shell-head h1{font-family:var(--font-mono);font-size:24px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.shell-head p{color:var(--text-secondary);font-size:14px;margin:0}
+.shell-back{display:inline-block;margin-bottom:18px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);text-decoration:none}
+.shell-back:hover{color:var(--text-accent)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="shell-wrap">
+<a class="shell-back" href="../index.html">&larr; Interview Prep home</a>
+<div class="shell-head">
+  <div class="shell-eyebrow">SQL / interactive</div>
+  <h1>Window frames — ROWS vs RANGE</h1>
+  <p>Why a running total over tied ordering values jumps in steps, and why the bug survives testing.</p>
+</div><h2 class="sr-only">Interactive explorer comparing ROWS and RANGE window frames over a table with tied ordering values.</h2>
+<style>
+.fr-btn{padding:5px 10px;font-size:13px;border:0.5px solid var(--border-strong);background:transparent;border-radius:var(--radius);cursor:pointer;color:var(--text-secondary)}
+.fr-btn[data-on="1"]{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.fr-row{cursor:pointer}
+.fr-row td{padding:5px 8px;font-family:var(--font-mono);font-size:13px;border-bottom:0.5px solid var(--border)}
+</style>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:1rem 0 0.75rem">
+  <span style="font-size:13px;color:var(--text-secondary);min-width:38px">Mode</span>
+  <button class="fr-btn" data-mode="ROWS" data-on="1">ROWS</button>
+  <button class="fr-btn" data-mode="RANGE">RANGE</button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:0.75rem">
+  <span style="font-size:13px;color:var(--text-secondary);min-width:38px">Start</span>
+  <button class="fr-btn" data-st="0" data-on="1">unbounded preceding</button>
+  <button class="fr-btn" data-st="1">2 preceding</button>
+  <button class="fr-btn" data-st="2">current row</button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:1.25rem">
+  <span style="font-size:13px;color:var(--text-secondary);min-width:38px">End</span>
+  <button class="fr-btn" data-en="0" data-on="1">current row</button>
+  <button class="fr-btn" data-en="1">1 following</button>
+  <button class="fr-btn" data-en="2">unbounded following</button>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start">
+  <div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 6px">Click a row to move the current row</p>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;font-size:12px;font-weight:400;color:var(--text-muted);padding:0 8px 4px">day</th>
+        <th style="text-align:right;font-size:12px;font-weight:400;color:var(--text-muted);padding:0 8px 4px">val</th>
+        <th style="text-align:right;font-size:12px;font-weight:400;color:var(--text-muted);padding:0 8px 4px">in frame</th>
+      </tr></thead>
+      <tbody id="fr-body"></tbody>
+    </table>
+  </div>
+  <div>
+    <pre id="fr-sql" style="font-family:var(--font-mono);font-size:12px;line-height:1.6;background:var(--surface-1);border-radius:var(--radius);padding:12px;margin:0;overflow-x:auto;color:var(--text-primary)"></pre>
+    <div style="background:var(--surface-1);border-radius:var(--radius);padding:1rem;margin-top:12px">
+      <p style="font-size:13px;color:var(--text-secondary);margin:0">Window sum for current row</p>
+      <p id="fr-sum" style="font-size:24px;font-weight:500;margin:2px 0 0">0</p>
+    </div>
+    <p id="fr-note" style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:12px 0 0"></p>
+  </div>
+</div>
+
+<script>
+(function(){
+var D=[[1,10],[2,20],[2,30],[3,40],[4,50],[4,60],[4,70],[5,80]];
+var ST=["UNBOUNDED PRECEDING","2 PRECEDING","CURRENT ROW"];
+var EN=["CURRENT ROW","1 FOLLOWING","UNBOUNDED FOLLOWING"];
+var mode="ROWS", st=0, en=0, cur=5;
+function inWin(i){
+  var n=D.length, day=D[cur][0];
+  if(mode==="ROWS"){
+    var a = st===0?0 : st===1?Math.max(0,cur-2) : cur;
+    var b = en===0?cur : en===1?Math.min(n-1,cur+1) : n-1;
+    return i>=a && i<=b;
+  }
+  var lo = st===0?-Infinity : st===1?day-2 : day;
+  var hi = en===0?day : en===1?day+1 : Infinity;
+  return D[i][0]>=lo && D[i][0]<=hi;
+}
+function draw(){
+  var body=document.getElementById("fr-body"), h="", sum=0;
+  for(var i=0;i<D.length;i++){
+    var w=inWin(i), isCur=i===cur;
+    if(w) sum+=D[i][1];
+    var bg = isCur?"var(--bg-warning)" : w?"var(--bg-accent)":"transparent";
+    var fg = isCur?"var(--text-warning)" : w?"var(--text-accent)":"var(--text-muted)";
+    h+='<tr class="fr-row" data-i="'+i+'" style="background:'+bg+';color:'+fg+'">'+
+       '<td>'+D[i][0]+'</td><td style="text-align:right">'+D[i][1]+'</td>'+
+       '<td style="text-align:right">'+(isCur?"current":(w?"yes":"—"))+'</td></tr>';
+  }
+  body.innerHTML=h;
+  Array.prototype.forEach.call(body.querySelectorAll(".fr-row"),function(tr){
+    tr.onclick=function(){cur=+tr.getAttribute("data-i");draw();};
+  });
+  document.getElementById("fr-sql").textContent=
+    "SELECT day, val,\n  SUM(val) OVER (\n    ORDER BY day\n    "+mode+" BETWEEN "+ST[st]+"\n"+
+    Array(10+mode.length).join(" ")+"AND "+EN[en]+"\n  )\nFROM t;";
+  document.getElementById("fr-sum").textContent=sum;
+  var peers=D.filter(function(r){return r[0]===D[cur][0];}).length>1;
+  document.getElementById("fr-note").textContent = mode==="RANGE"
+    ? (peers
+       ? "Day "+D[cur][0]+" has peers. RANGE is defined by values of the ordering column, so every tied row enters or leaves together — a running total computed this way jumps in steps and shows the same figure on all tied rows."
+       : "No peers at this value, so RANGE and ROWS agree here. That is exactly why the bug survives testing on clean data and surfaces in production.")
+    : "ROWS counts physical positions before and after the current row, ignoring ties. Deterministic, and almost always what people mean by the last N rows.";
+}
+Array.prototype.forEach.call(document.querySelectorAll(".fr-btn"),function(b){
+  b.onclick=function(){
+    var g = b.hasAttribute("data-mode")?"data-mode":b.hasAttribute("data-st")?"data-st":"data-en";
+    Array.prototype.forEach.call(document.querySelectorAll("["+g+"]"),function(x){x.setAttribute("data-on","0");});
+    b.setAttribute("data-on","1");
+    if(g==="data-mode") mode=b.getAttribute("data-mode");
+    else if(g==="data-st") st=+b.getAttribute("data-st");
+    else en=+b.getAttribute("data-en");
+    draw();
+  };
+});
+draw();
+})();
+</script>
+</div>
+</body>
+</html>

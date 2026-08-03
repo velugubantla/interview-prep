@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design interview — interactive demos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+  --red:#9B3226; --red-wash:#F7E9E7;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+    --red:#D98A7E; --red-wash:#241512;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1000px;margin:0 auto;padding:40px 24px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:8px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+h2{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:500;margin:46px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rule);
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h2 span{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:none;font-family:"IBM Plex Sans",sans-serif}
+.lede{color:var(--ink-2);font-size:14px;margin:0 0 18px}
+
+/* drill toggle */
+.drill{display:flex;align-items:center;gap:12px;margin:18px 0 4px;padding:11px 15px;
+  border:1px solid var(--rule);background:var(--panel);border-radius:2px}
+.drill .lbl{font-size:13.5px;font-weight:500}
+.drill .hint{font-size:12.5px;color:var(--ink-3);flex:1}
+.sw{position:relative;width:40px;height:22px;background:var(--rule);border-radius:11px;cursor:pointer;flex-shrink:0;transition:background .2s}
+.sw.on{background:var(--green)}
+.sw i{position:absolute;top:3px;left:3px;width:16px;height:16px;background:var(--panel);border-radius:50%;transition:transform .2s}
+.sw.on i{transform:translateX(18px)}
+
+.out{transition:filter .18s}
+body.drill-on .out.masked{filter:blur(7px);cursor:pointer;user-select:none}
+body.drill-on .out.masked::after{content:''}
+
+/* controls */
+.sl{display:grid;grid-template-columns:190px 1fr 106px;align-items:center;gap:14px;padding:6px 0}
+.sl label{font-size:13.5px;color:var(--ink-2)}
+.sl .v{font-family:"IBM Plex Mono",monospace;font-size:13.5px;font-weight:500;text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--rule);outline:none;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--paper);border:2px solid var(--blue);cursor:pointer}
+input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
+
+/* clock */
+.clock{display:flex;width:100%;border:1px solid var(--rule);overflow:hidden}
+.seg{flex-shrink:0;border:none;border-right:1px solid var(--rule);background:var(--panel);cursor:pointer;
+  padding:10px 8px;text-align:left;min-width:0;font-family:inherit;color:var(--ink);transition:background .2s}
+.seg:last-child{border-right:none}
+.seg:hover{background:var(--blue-wash)}
+.seg.on{background:var(--blue)}
+.seg.on .nm,.seg.on .mm{color:#fff}
+.mm{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-2)}
+.nm{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.scale{display:flex;align-items:center;gap:12px;margin-top:9px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3)}
+.scale i{flex:1;border-top:1px dashed var(--rule)}
+.cdesc{border-left:3px solid var(--blue);background:var(--blue-wash);padding:14px 18px;margin-top:14px;min-height:100px}
+.cdesc .t{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.cdesc .d{font-size:14.5px}
+.cdesc .k{font-size:13px;color:var(--ink-2);margin-top:8px;font-style:italic}
+
+/* metric cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.cell{background:var(--panel);padding:15px 17px;transition:background .25s}
+.cell .k{font-size:12px;color:var(--ink-2)}
+.cell .n{font-family:"IBM Plex Mono",monospace;font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:3px;transition:color .25s}
+.cell .m{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);margin-top:5px}
+.cell.hot{background:var(--amber-wash)}
+.cell.hot .n{color:var(--amber)}
+
+.verdict{border-left:3px solid var(--blue);background:var(--blue-wash);padding:14px 18px;margin-top:14px}
+.verdict .t{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.verdict p{margin:0;font-size:14.5px}
+.verdict.warn{border-color:var(--amber);background:var(--amber-wash)}
+.verdict.warn .t{color:var(--amber)}
+.verdict.good{border-color:var(--green);background:var(--green-wash)}
+.verdict.good .t{color:var(--green)}
+.verdict.bad{border-color:var(--red);background:var(--red-wash)}
+.verdict.bad .t{color:var(--red)}
+
+/* strategy panels */
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px}
+.strat{border:1px solid var(--rule);background:var(--panel);padding:16px 18px;transition:border-color .25s,background .25s}
+.strat.win{border:2px solid var(--green);background:var(--green-wash)}
+.strat h3{font-size:15.5px;font-weight:600;margin:0 0 2px}
+.strat .sd{font-size:12.5px;color:var(--ink-2);margin-bottom:14px}
+.ln{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px}
+.ln span:last-child{font-family:"IBM Plex Mono",monospace;font-weight:500}
+.tb{height:5px;background:var(--rule);margin:0 0 12px}
+.tb i{display:block;height:100%;width:0;background:var(--ink-3);transition:width .35s}
+.strat.win .tb i{background:var(--green)}
+.tot{display:flex;justify-content:space-between;font-size:14px;font-weight:600;border-top:1px solid var(--rule);padding-top:9px;margin-top:2px}
+.tot span:last-child{font-family:"IBM Plex Mono",monospace}
+
+/* quorum nodes */
+.nodes{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px}
+.nd{width:56px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid var(--rule);background:var(--panel);font-family:"IBM Plex Mono",monospace;transition:background .2s,border-color .2s}
+.nd b{font-size:15px;font-weight:600}
+.nd s{font-size:9.5px;text-decoration:none;letter-spacing:.08em;margin-top:2px}
+.nd.w{background:var(--blue-wash);border-color:var(--blue);color:var(--blue)}
+.nd.r{background:var(--amber-wash);border-color:var(--amber);color:var(--amber)}
+.nd.o{background:var(--green-wash);border-color:var(--green);color:var(--green)}
+.lg{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-bottom:16px}
+.lg i{display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px;border:1px solid var(--rule)}
+
+.ref{width:100%;border-collapse:collapse;font-size:13.5px}
+.ref td{padding:7px 0;border-bottom:1px solid var(--rule)}
+.ref td:last-child{text-align:right;font-family:"IBM Plex Mono",monospace;color:var(--ink-2);white-space:nowrap}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+footer{margin-top:50px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+@media (max-width:700px){
+  .sl{grid-template-columns:1fr 92px;gap:8px}
+  .sl input[type=range]{grid-column:1/-1}
+  .two-col{grid-template-columns:1fr;gap:24px}
+  .clock{flex-wrap:wrap}
+  .seg{flex:1 1 33%!important;min-width:112px;border-bottom:1px solid var(--rule)}
+}
+@media print{body{background:#fff}.drill{display:none}.out{filter:none!important}}
+</style>
+</head>
+<body>
+<div class="sheet">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+
+<header>
+  <div class="eyebrow">Interactive demos / companion to the wall chart</div>
+  <h1>Four things you must be able to derive live</h1>
+  <p class="sub">Not four things you must recognize. Each of these is a place where candidates recite and seniors reason. Works offline — this file has no dependencies beyond the web font.</p>
+</header>
+
+<div class="drill">
+  <div class="sw" id="sw"><i></i></div>
+  <div>
+    <div class="lbl">Drill mode</div>
+    <div class="hint">Blurs every result until you tap it. Move a slider, say the numbers out loud, then reveal. This is the only mode that builds recall instead of recognition.</div>
+  </div>
+</div>
+
+<!-- 1. CLOCK -->
+<h2>01 &middot; The 45-minute clock <span>click a phase</span></h2>
+<p class="lede">Segment widths are proportional to real minutes. The two wide blocks are where the score is won; the three narrow ones at the front are where it is most often lost.</p>
+<div class="clock" id="clk"></div>
+<div class="scale"><span>0 min</span><i></i><span>45 min</span></div>
+<div class="cdesc"><div class="t" id="cdt"></div><div class="d" id="cdd"></div><div class="k" id="cdk"></div></div>
+
+<!-- 2. NAPKIN -->
+<h2>02 &middot; Back-of-envelope estimation <span>the first ten minutes</span></h2>
+<p class="lede">The number is not the point. Knowing which dimension dominates is the point, because that dimension <em>is</em> the design.</p>
+<div id="ctl-n">
+  <div class="sl"><label for="s1">Daily active users</label><input type="range" id="s1" min="4" max="9" step="1" value="7"><span class="v" id="o1"></span></div>
+  <div class="sl"><label for="s2">Writes per user per day</label><input type="range" id="s2" min="1" max="200" step="1" value="10"><span class="v" id="o2"></span></div>
+  <div class="sl"><label for="s3">Read : write ratio</label><input type="range" id="s3" min="1" max="500" step="1" value="100"><span class="v" id="o3"></span></div>
+  <div class="sl"><label for="s4">Payload per write</label><input type="range" id="s4" min="1" max="5" step="1" value="2"><span class="v" id="o4"></span></div>
+  <div class="sl"><label for="s5">Retention</label><input type="range" id="s5" min="1" max="10" step="1" value="5"><span class="v" id="o5"></span></div>
+  <div class="sl"><label for="s6">Peak multiplier</label><input type="range" id="s6" min="2" max="10" step="1" value="3"><span class="v" id="o6"></span></div>
+</div>
+<div class="out" data-demo="n" style="margin-top:14px">
+  <div class="grid">
+    <div class="cell" id="cw"><div class="k">Write QPS</div><div class="n" id="r1"></div><div class="m" id="m1"></div></div>
+    <div class="cell" id="cr"><div class="k">Read QPS</div><div class="n" id="r2"></div><div class="m" id="m2"></div></div>
+    <div class="cell" id="cb"><div class="k">Ingest bandwidth</div><div class="n" id="r3"></div><div class="m" id="m3"></div></div>
+    <div class="cell" id="cs"><div class="k">Storage at retention</div><div class="n" id="r4"></div><div class="m" id="m4"></div></div>
+    <div class="cell"><div class="k">Hot cache set</div><div class="n" id="r5"></div><div class="m">1 day reads, 20% hot</div></div>
+    <div class="cell"><div class="k">Shards</div><div class="n" id="r6"></div><div class="m">2 TB usable per node</div></div>
+  </div>
+  <div class="verdict"><div class="t">What dominates</div><p id="nv"></p></div>
+</div>
+
+<!-- 3. FANOUT -->
+<h2>03 &middot; Fan-out on write vs read <span>the most-asked tradeoff</span></h2>
+<p class="lede">The crossover is not a matter of taste. It falls out of the read-to-write ratio and the follower count, and it moves when a celebrity enters the system.</p>
+<div id="ctl-f">
+  <div class="sl"><label for="q1">Daily active users</label><input type="range" id="q1" min="5" max="9" step="1" value="8"><span class="v" id="w1"></span></div>
+  <div class="sl"><label for="q2">Followers per user</label><input type="range" id="q2" min="1" max="5" step="1" value="3"><span class="v" id="w2"></span></div>
+  <div class="sl"><label for="q3">Posts per user per day</label><input type="range" id="q3" min="1" max="20" step="1" value="2"><span class="v" id="w3"></span></div>
+  <div class="sl"><label for="q4">Feed loads per user per day</label><input type="range" id="q4" min="1" max="50" step="1" value="20"><span class="v" id="w4"></span></div>
+</div>
+<div class="out" data-demo="f" style="margin-top:14px">
+  <div class="two">
+    <div class="strat" id="sa">
+      <h3>Fan-out on write</h3><div class="sd">Push each post into every follower's feed at publish time</div>
+      <div class="ln"><span>Write path ops/s</span><span id="aw"></span></div><div class="tb"><i id="awb"></i></div>
+      <div class="ln"><span>Read path ops/s</span><span id="ar"></span></div><div class="tb"><i id="arb"></i></div>
+      <div class="tot"><span>Total</span><span id="at"></span></div>
+    </div>
+    <div class="strat" id="sb">
+      <h3>Fan-out on read</h3><div class="sd">Store the post once, merge followee timelines at read time</div>
+      <div class="ln"><span>Write path ops/s</span><span id="bw"></span></div><div class="tb"><i id="bwb"></i></div>
+      <div class="ln"><span>Read path ops/s</span><span id="br"></span></div><div class="tb"><i id="brb"></i></div>
+      <div class="tot"><span>Total</span><span id="bt"></span></div>
+    </div>
+  </div>
+  <div class="verdict" id="fvw"><div class="t">Crossover</div><p id="fv"></p></div>
+</div>
+
+<!-- 4. QUORUM -->
+<h2>04 &middot; Quorum tuning <span>W + R &gt; N, made visible</span></h2>
+<p class="lede">Drag until the sets stop overlapping and watch what you lose. The inequality is not a rule to memorize — it is the condition under which a read is guaranteed to touch a node that saw the write.</p>
+<div id="ctl-q">
+  <div class="sl"><label for="n1">Replicas (N)</label><input type="range" id="n1" min="3" max="9" step="1" value="5"><span class="v" id="vn"></span></div>
+  <div class="sl"><label for="n2">Write quorum (W)</label><input type="range" id="n2" min="1" max="9" step="1" value="3"><span class="v" id="vw"></span></div>
+  <div class="sl"><label for="n3">Read quorum (R)</label><input type="range" id="n3" min="1" max="9" step="1" value="3"><span class="v" id="vr"></span></div>
+</div>
+<div class="out" data-demo="q" style="margin-top:14px">
+  <div class="nodes" id="nds"></div>
+  <div class="lg">
+    <span><i style="background:var(--blue-wash);border-color:var(--blue)"></i>write set</span>
+    <span><i style="background:var(--amber-wash);border-color:var(--amber)"></i>read set</span>
+    <span><i style="background:var(--green-wash);border-color:var(--green)"></i>overlap</span>
+    <span><i style="background:var(--panel)"></i>idle</span>
+  </div>
+  <div class="grid">
+    <div class="cell"><div class="k">W + R vs N</div><div class="n" id="eq"></div></div>
+    <div class="cell"><div class="k">Write fault tolerance</div><div class="n" id="fw"></div></div>
+    <div class="cell"><div class="k">Read fault tolerance</div><div class="n" id="fr"></div></div>
+    <div class="cell"><div class="k">Config shape</div><div class="n" id="sh" style="font-size:15px"></div></div>
+  </div>
+  <div class="verdict" id="qvw"><div class="t">Reading</div><p id="qv"></p></div>
+</div>
+
+<h2>Reference constants</h2>
+<div class="two-col">
+<div>
+<table class="ref">
+<tr><td>Seconds in a day</td><td>~10<sup>5</sup></td></tr>
+<tr><td>1 M / day</td><td>12 /s</td></tr>
+<tr><td>100 M / day</td><td>1.2 K /s</td></tr>
+<tr><td>1 B / day</td><td>12 K /s</td></tr>
+<tr><td>1 KB &times; 1 B rows</td><td>1 TB</td></tr>
+<tr><td>Commodity node</td><td>64 GB / 2 TB</td></tr>
+<tr><td>Single Postgres primary</td><td>5&ndash;10 K w/s</td></tr>
+<tr><td>Realistic cache hit rate</td><td>80&ndash;95%</td></tr>
+<tr><td>Peak multiplier default</td><td>3&times;</td></tr>
+</table>
+</div>
+<div>
+<table class="ref">
+<tr><td>L1 cache</td><td>1 ns</td></tr>
+<tr><td>Main memory</td><td>100 ns</td></tr>
+<tr><td>1 MB from memory</td><td>3 &micro;s</td></tr>
+<tr><td>SSD random read</td><td>16 &micro;s</td></tr>
+<tr><td>1 MB from SSD</td><td>49 &micro;s</td></tr>
+<tr><td>Same-DC round trip</td><td>500 &micro;s</td></tr>
+<tr><td>1 MB from disk</td><td>825 &micro;s</td></tr>
+<tr><td>Disk seek</td><td>2 ms</td></tr>
+<tr><td>CA &rarr; Netherlands</td><td>150 ms</td></tr>
+</table>
+</div>
+</div>
+
+<footer>Self-contained. Save it anywhere, open it in any browser, works offline. Companion files: the wall chart, the cheatsheet, and the ACID / SOLID / patterns sheet.</footer>
+
+</div>
+
+<script>
+/* ---------- drill mode ---------- */
+let drill=false;
+const sw=document.getElementById('sw');
+sw.onclick=()=>{drill=!drill;sw.classList.toggle('on',drill);document.body.classList.toggle('drill-on',drill);
+  if(!drill)document.querySelectorAll('.out').forEach(o=>o.classList.remove('masked'));};
+function maskOn(demo){if(drill)document.querySelector('.out[data-demo="'+demo+'"]').classList.add('masked');}
+document.querySelectorAll('.out').forEach(o=>o.addEventListener('click',()=>o.classList.remove('masked')));
+
+const g=id=>document.getElementById(id);
+function f(n,u){const s=['','K','M','G','T','P','E'];let i=0;
+  while(Math.abs(n)>=1000&&i<6){n/=1000;i++}
+  return (n>=100?Math.round(n):Number(n.toFixed(1))).toLocaleString()+' '+s[i]+(u||'');}
+
+/* ---------- 1. clock ---------- */
+const PH=[
+[5,'Clarify','Functional requirements in three to five bullets, plus an explicit list of non-goals. State which non-functional you are optimizing for and get agreement before you draw anything.','Failure here: designing before scoping. The most common senior-level rejection.'],
+[3,'Quantify','Scale, QPS, storage, latency SLO, consistency requirement. Say every number out loud, even rough ones.','Failure here: an interviewer who never hears a number assumes you cannot produce one.'],
+[4,'API and data model','Three to five endpoints and the core entities. Name the access pattern before you name the datastore.','Failure here: picking a database by reputation instead of by access pattern.'],
+[13,'High-level design','Draw it once, end to end: client, edge, services, storage, async path, analytics. Get data flowing before optimizing any part.','Failure here: orphan boxes with nothing flowing through them.'],
+[13,'Deep dive','Let them pick, or offer: the two risky parts are X and Y, which do you want. Go two or three levels down and know the failure modes.','Offering the choice is itself a seniority signal. Most candidates wait to be told.'],
+[5,'Failure and ops','What breaks first, how you detect it, how it degrades rather than dies. Blast radius, rollback, and the metric you would page on.','Failure here: a design with no stated failure behaviour reads as untested thinking.'],
+[2,'Wrap','Recap the two or three decisions that defined the design, and name what you would revisit with more time.','Failure here: trailing off. The last thing they hear becomes the summary they write.']];
+const clk=g('clk');
+PH.forEach((p,i)=>{
+  const b=document.createElement('button');
+  b.className='seg';b.style.flex=p[0];
+  b.innerHTML='<div class="mm">'+p[0]+' min</div><div class="nm">'+p[1]+'</div>';
+  b.onclick=()=>{document.querySelectorAll('.seg').forEach(s=>s.classList.remove('on'));b.classList.add('on');
+    g('cdt').textContent=p[1]+' \u00b7 '+p[0]+' minutes';g('cdd').textContent=p[2];g('cdk').textContent=p[3];};
+  clk.appendChild(b);if(i===0)b.click();});
+
+/* ---------- 2. napkin ---------- */
+const DAU={4:['10 K',1e4],5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const PAY={1:['1 KB text',1024],2:['10 KB record',10240],3:['100 KB thumb',102400],4:['500 KB image',512000],5:['3 MB media',3145728]};
+function napkin(){
+  const d=DAU[s1.value],w=+s2.value,rw=+s3.value,y=PAY[s4.value],ret=+s5.value,pk=+s6.value;
+  g('o1').textContent=d[0];g('o2').textContent=w;g('o3').textContent=rw+' : 1';
+  g('o4').textContent=y[0];g('o5').textContent=ret+' yr';g('o6').textContent=pk+'\u00d7';
+  const wq=d[1]*w/86400,rq=wq*rw,bps=wq*y[1],yr=bps*31536000,tot=yr*ret,rep=tot*3;
+  g('r1').textContent=f(wq);g('m1').textContent='peak '+f(wq*pk);
+  g('r2').textContent=f(rq);g('m2').textContent='peak '+f(rq*pk);
+  g('r3').textContent=f(bps*8,'bps');g('m3').textContent=f(bps,'B')+' / s';
+  g('r4').textContent=f(tot,'B');g('m4').textContent='\u00d73 replicas = '+f(rep,'B');
+  g('r5').textContent=f(rq*86400*y[1]*0.2,'B');
+  g('r6').textContent=Math.max(1,Math.ceil(rep/2e12)).toLocaleString();
+  const sc={cw:wq/5000,cr:rq/100000,cb:bps/1.25e8,cs:rep/5e13};
+  const top=Object.keys(sc).reduce((a,b)=>sc[a]>sc[b]?a:b);
+  Object.keys(sc).forEach(k=>g(k).classList.toggle('hot',k===top&&sc[top]>1));
+  let v;
+  if(sc[top]<=1)v='Nothing dominates yet. One well-indexed primary plus a cache is a legitimate answer here \u2014 say that out loud. Reaching for shards at this scale is the most common over-engineering tell.';
+  else if(top==='cb')v='Payload and bandwidth dominate. This is a blob store plus CDN problem: metadata in the database, bytes in object storage, presigned uploads. Never put the object in the row.';
+  else if(top==='cr')v='Reads dominate. The cache tier and read replicas are the design; the write path is almost incidental. Expect the deep dive to be invalidation, hot keys and stampede protection.';
+  else if(top==='cw')v='Writes dominate. A single leader will not absorb this. Partitioning strategy and a log-structured store are the conversation, and the follow-up will be resharding without downtime.';
+  else v='Storage dominates. Retention policy, tiering and compaction are the real design, not QPS. Asking whether you are allowed to delete anything reads as senior.';
+  g('nv').textContent=v;}
+['s1','s2','s3','s4','s5','s6'].forEach(i=>g(i).addEventListener('input',()=>{napkin();maskOn('n');}));
+
+/* ---------- 3. fan-out ---------- */
+const FU={5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const FO={1:['50',50],2:['200',200],3:['1 K',1000],4:['10 K',10000],5:['100 K celebrity',100000]};
+function fanout(){
+  const u=FU[q1.value],fo=FO[q2.value],p=+q3.value,l=+q4.value;
+  g('w1').textContent=u[0];g('w2').textContent=fo[0];g('w3').textContent=p;g('w4').textContent=l;
+  const ps=u[1]*p/86400,ls=u[1]*l/86400;
+  const aw=ps*fo[1],ar=ls,at=aw+ar,bw=ps,br=ls*fo[1],bt=bw+br,mx=Math.max(at,bt);
+  g('aw').textContent=f(aw);g('ar').textContent=f(ar);g('at').textContent=f(at);
+  g('bw').textContent=f(bw);g('br').textContent=f(br);g('bt').textContent=f(bt);
+  g('awb').style.width=(aw/mx*100)+'%';g('arb').style.width=(ar/mx*100)+'%';
+  g('bwb').style.width=(bw/mx*100)+'%';g('brb').style.width=(br/mx*100)+'%';
+  g('sa').classList.toggle('win',at<=bt);g('sb').classList.toggle('win',bt<at);
+  const box=g('fvw');box.className='verdict';
+  let v;
+  if(fo[1]>=100000){box.classList.add('warn');
+    v='Celebrity regime. Fan-out on write means one post triggers '+f(fo[1])+'writes \u2014 a thundering write storm and a latency spike on publish. The real answer is hybrid: precompute feeds for normal accounts, pull celebrity posts at read time and merge. Say "hybrid" and name the follower threshold that switches the strategy.';}
+  else if(at<bt){box.classList.add('good');
+    v='Fan-out on write wins by '+f(bt-at)+'ops/s. Reads outnumber writes enough that precomputing the feed pays for itself. The cost you accept is write amplification and stale feeds during backfill.';}
+  else{box.classList.add('good');
+    v='Fan-out on read wins by '+f(at-bt)+'ops/s. Writes are frequent relative to reads, so materializing feeds would be work that mostly goes unread. The cost you accept is read latency proportional to followee count.';}
+  g('fv').textContent=v;}
+['q1','q2','q3','q4'].forEach(i=>g(i).addEventListener('input',()=>{fanout();maskOn('f');}));
+
+/* ---------- 4. quorum ---------- */
+function quorum(){
+  const N=+n1.value;n2.max=N;n3.max=N;
+  if(+n2.value>N)n2.value=N;
+  if(+n3.value>N)n3.value=N;
+  const W=+n2.value,R=+n3.value;
+  g('vn').textContent=N;g('vw').textContent=W;g('vr').textContent=R;
+  let h='';
+  for(let i=0;i<N;i++){
+    const inW=i<W,inR=i>=N-R;
+    const c=inW&&inR?'o':inW?'w':inR?'r':'';
+    const lab=inW&&inR?'W R':inW?'W':inR?'R':'\u2014';
+    h+='<div class="nd '+c+'"><b>'+(i+1)+'</b><s>'+lab+'</s></div>';}
+  g('nds').innerHTML=h;
+  const strong=W+R>N;
+  g('eq').textContent=W+' + '+R+(strong?' > ':' \u2264 ')+N;
+  g('eq').style.color=strong?'var(--green)':'var(--red)';
+  g('fw').textContent=(N-W)+' node'+(N-W===1?'':'s');
+  g('fr').textContent=(N-R)+' node'+(N-R===1?'':'s');
+  let shape;
+  if(W===N&&R===1)shape='Read optimized';
+  else if(W===1&&R===N)shape='Write optimized';
+  else if(strong&&W===R)shape='Balanced quorum';
+  else if(strong)shape='Skewed quorum';
+  else shape='Eventual only';
+  g('sh').textContent=shape;
+  const box=g('qvw');box.className='verdict';
+  let v;
+  if(!strong){box.classList.add('bad');
+    v='The sets do not overlap. A read can hit only nodes that never saw the latest write, so you are in eventual consistency territory \u2014 stale reads are possible and you need read repair plus anti-entropy to converge. Legitimate for feeds and counters. Not legitimate for balances or inventory.';}
+  else if(W===N){box.classList.add('warn');
+    v='Overlap guaranteed, but W equals N means a single node failure blocks all writes. Reads are as fast and available as possible. This is the read-optimized extreme \u2014 defensible for config data written rarely and read constantly.';}
+  else if(R===N){box.classList.add('warn');
+    v='Overlap guaranteed, but R equals N means a single node failure blocks all reads. Writes are cheap and highly available. Rarely the right call \u2014 most systems read far more than they write.';}
+  else{box.classList.add('good');
+    v='Every read set intersects every write set, so at least one node returns the latest version and versioning resolves the rest. You tolerate '+(N-W)+' failures on writes and '+(N-R)+' on reads while keeping fresh reads. Default here, and say the reasoning out loud rather than quoting the inequality.';}
+  g('qv').textContent=v;}
+['n1','n2','n3'].forEach(i=>g(i).addEventListener('input',()=>{quorum();maskOn('q');}));
+
+napkin();fanout();quorum();
+</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL — the full map</title>
+<style>
+  :root{
+    --paper:#FBFAF6; --panel:#FFFFFF; --card:#FFFFFF;
+    --ink:#16181C; --muted:#5A6068; --rule:#C3CFD8; --rule2:#D8E4EC;
+    --keep:#2C6E49; --keepbg:#E6F1EA;
+    --drop:#9B3226; --dropbg:#F7E9E7;
+    --mark:#9A6A05; --markbg:#FBF1DC;
+    --hl:#E8F0F6; --numlit:#1F4E79; --trapline:#E5C4BC;
+    --navbg:rgba(251,250,246,.94);
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#12151A; --panel:#171B21; --card:#1C232B;
+      --ink:#E8EAED; --muted:#9BA3AC; --rule:#2A333D; --rule2:#1E252D;
+      --keep:#7FBF9A; --keepbg:#122019;
+      --drop:#D98A7E; --dropbg:#241512;
+      --mark:#D9A441; --markbg:#241D0F;
+      --hl:#16232F; --numlit:#79ACD6; --trapline:#57302A;
+      --navbg:rgba(18,21,26,.94);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:88px}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---- masthead ---- */
+  .mast{padding:56px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;gap:12px;align-items:center;margin:0 0 18px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.8rem,4.4vw,2.8rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.015em}
+  .standfirst{max-width:62ch;color:var(--muted);font-size:1.02rem;margin:0 0 6px}
+  .standfirst strong{color:var(--ink);font-weight:600}
+
+  /* ---- sticky nav ---- */
+  .nav{position:sticky;top:0;z-index:50;background:var(--navbg);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);margin-top:36px}
+  .nav-in{max-width:1080px;margin:0 auto;padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .nav button{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;background:transparent;color:var(--muted);border:1px solid var(--rule);padding:4px 8px;border-radius:2px;transition:.15s;cursor:pointer}
+  .nav button:hover{color:var(--ink);border-color:var(--ink)}
+  .score{margin-left:auto;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .score b{color:var(--keep)}
+
+  /* ---- execution engine ---- */
+  .engine{margin:40px 0 60px;border:1px solid var(--rule);background:var(--panel);border-radius:2px;overflow:hidden}
+  .engine-head{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}
+  .engine-head h2{font-family:var(--mono);font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;margin:0;font-weight:700}
+  .engine-head p{margin:0;font-size:.84rem;color:var(--muted);max-width:52ch}
+  .stages{display:flex;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  .stage{font-family:var(--mono);font-size:.72rem;border:1px solid var(--rule);background:transparent;color:var(--muted);padding:6px 10px;margin:3px 6px 3px 0;cursor:pointer;border-radius:2px;transition:.18s}
+  .stage:hover{border-color:var(--ink);color:var(--ink)}
+  .stage[aria-current="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .stage .n{opacity:.55;margin-right:6px}
+  .engine-body{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+  .pane{padding:20px}
+  .pane+.pane{border-left:1px solid var(--rule)}
+  .pane-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .rowcount{float:right;text-transform:uppercase}
+  .sqlblock{font-family:var(--mono);font-size:.86rem;line-height:1.9;margin:0}
+  .sqlblock .line{padding:1px 8px;border-left:2px solid transparent;transition:.2s;opacity:.42}
+  .sqlblock .line.active{background:var(--hl);border-left-color:var(--mark);opacity:1}
+  .sqlblock .line.done{opacity:.72}
+  .note{margin:20px 0 0;font-size:.86rem;color:var(--muted);min-height:6.2em}
+  .note b{color:var(--ink)}
+  .grid{display:flex;flex-direction:column;gap:3px;min-height:330px}
+  .r{display:grid;grid-template-columns:2.2rem 1fr 4.6rem 5rem;gap:8px;align-items:center;font-family:var(--mono);font-size:.78rem;padding:4px 8px;background:var(--card);border:1px solid var(--rule);border-radius:2px;transition:opacity .35s,transform .35s,background .3s,border-color .3s}
+  .r .id{color:var(--muted);font-size:.7rem}
+  .r .amt{text-align:right}
+  .r .st{color:var(--muted);font-size:.72rem}
+  .r.dropping{background:var(--dropbg);border-color:var(--drop);color:var(--drop);text-decoration:line-through;opacity:.8}
+  .r.entering{opacity:0;transform:translateY(-6px)}
+  .r.agg{background:var(--keepbg);border-color:var(--keep)}
+  .r.agg .amt{color:var(--keep);font-weight:600}
+  .controls{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--rule);flex-wrap:wrap}
+
+  /* ---- shared control buttons ---- */
+  .ctl{font-family:var(--mono);font-size:.73rem;letter-spacing:.05em;background:var(--ink);color:var(--panel);border:1px solid var(--ink);padding:7px 14px;cursor:pointer;border-radius:2px;transition:.18s}
+  .ctl.ghost{background:transparent;color:var(--ink)}
+  .ctl:hover{opacity:.82}
+  .ctl:disabled{opacity:.32;cursor:default}
+  .ctl.on{background:var(--ink);color:var(--panel)}
+  .ctl.off{background:transparent;color:var(--muted);border-color:var(--rule)}
+  .ctl.off:hover{color:var(--ink);border-color:var(--ink)}
+  :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+
+  /* ---- tier sections ---- */
+  .tier{border-top:1px solid var(--rule)}
+  .tier-btn{width:100%;display:grid;grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1.1fr) 1.4rem;gap:16px;align-items:baseline;text-align:left;background:none;border:none;cursor:pointer;padding:22px 4px;font-family:inherit;color:inherit}
+  .tier-btn:hover .tier-name{text-decoration:underline;text-underline-offset:3px}
+  .tier-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .tier-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+  .tier-sub{font-size:.86rem;color:var(--muted)}
+  .chev{font-family:var(--mono);color:var(--muted);transition:transform .2s;justify-self:end}
+  .tier[data-open="true"] .chev{transform:rotate(90deg)}
+  .tier-body{display:none;padding:0 0 40px}
+  .tier[data-open="true"] .tier-body{display:block}
+  .tier-intro{max-width:66ch;font-size:.95rem;color:var(--muted);margin:0 0 28px;padding-left:calc(3.4rem + 16px)}
+  .tier-intro b{color:var(--ink)}
+
+  /* ---- concept cards ---- */
+  .concept{display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:16px;margin-bottom:26px}
+  .c-mark{font-family:var(--mono);font-size:.68rem;color:var(--muted);padding-top:.35em;letter-spacing:.06em}
+  .c-body{min-width:0}
+  .c-title{font-family:var(--mono);font-size:.92rem;font-weight:700;margin:0 0 6px}
+  .c-text{margin:0 0 12px;font-size:.93rem;max-width:64ch}
+  .c-text code{font-family:var(--mono);font-size:.85em;background:var(--hl);padding:1px 4px;border-radius:2px}
+  pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:var(--card);border:1px solid var(--rule);border-left:2px solid var(--ink);padding:12px 14px;overflow-x:auto;margin:0 0 12px;border-radius:2px}
+  .trap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:.87rem;background:var(--dropbg);border:1px solid var(--trapline);border-radius:2px;padding:10px 12px;margin:0 0 12px;max-width:66ch}
+  .trap .lbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--drop);padding-top:.3em}
+  .trap p{margin:0}
+  .kw{color:var(--drop);font-weight:600}
+  .fn{color:var(--keep);font-weight:600}
+  .str{color:var(--mark)}
+  .num{color:var(--numlit)}
+  .cm{color:var(--muted);font-style:italic}
+
+  /* ---- demo shell ---- */
+  .demo{border:1px solid var(--rule);background:var(--panel);border-radius:2px;margin:0 0 16px;overflow:hidden}
+  .demo-head{padding:12px 16px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .demo-head h4{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin:0}
+  .demo-head p{margin:0;font-size:.8rem;color:var(--muted);flex:1;min-width:14ch}
+  .demo-bar{padding:12px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--rule2)}
+  .demo-bar .lab{font-family:var(--mono);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:4px}
+  .demo-main{padding:16px;display:grid;gap:16px}
+  .demo-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .demo-out{font-size:.86rem;color:var(--muted);padding:12px 16px;border-top:1px solid var(--rule2);min-height:3.2em}
+  .demo-out b{color:var(--ink)}
+  .demo-out .verdict{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-right:8px}
+  .v-ok{background:var(--keepbg);color:var(--keep)}
+  .v-bad{background:var(--dropbg);color:var(--drop)}
+  .v-warn{background:var(--markbg);color:var(--mark)}
+
+  /* ---- mini tables ---- */
+  table.t{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;background:var(--card)}
+  table.t th{text-align:left;font-weight:600;color:var(--muted);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--rule)}
+  table.t td{padding:5px 8px;border-bottom:1px solid var(--rule2);transition:background .3s,color .3s,opacity .3s}
+  table.t tr:last-child td{border-bottom:none}
+  table.t tr.keep td{background:var(--keepbg)}
+  table.t tr.drop td{background:var(--dropbg);color:var(--drop);opacity:.75}
+  table.t tr.dim td{opacity:.34}
+  table.t tr.hot td{background:var(--markbg)}
+  table.t tr.win td{background:var(--keepbg);box-shadow:inset 2px 0 0 var(--keep)}
+  table.t tr.cur td{background:var(--markbg);box-shadow:inset 2px 0 0 var(--mark);font-weight:600}
+  table.t tr.enter td{opacity:0}
+  table.t td.num{text-align:right}
+  .tcap{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .tbox{border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+
+  /* ---- grid canvas (index demo) ---- */
+  .cells{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--rule2);border-radius:1px;transition:background .12s,border-color .12s}
+  .cell.read{background:var(--markbg);border-color:var(--mark)}
+  .cell.hit{background:var(--keep);border-color:var(--keep)}
+
+  /* ---- tree (recursive demo) ---- */
+  .tree{display:flex;flex-direction:column;gap:10px}
+  .lvl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .lvl .lname{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);width:5.4rem;flex-shrink:0}
+  .node{font-family:var(--mono);font-size:.74rem;border:1px solid var(--rule);background:var(--card);color:var(--muted);padding:4px 9px;border-radius:2px;transition:.3s;opacity:.45}
+  .node.on{opacity:1;background:var(--keepbg);border-color:var(--keep);color:var(--keep);font-weight:600}
+  .node.new{background:var(--markbg);border-color:var(--mark);color:var(--mark);opacity:1;font-weight:600}
+
+  /* ---- sessions (txn demo) ---- */
+  .sessions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sess{border:1px solid var(--rule);border-radius:2px;background:var(--card);overflow:hidden}
+  .sess h5{margin:0;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--rule2);color:var(--muted)}
+  .sess ol{margin:0;padding:8px 10px 10px 26px;font-family:var(--mono);font-size:.75rem;line-height:1.8}
+  .sess li{color:var(--muted);opacity:.4;transition:.25s;padding-left:2px}
+  .sess li.on{opacity:1;color:var(--ink)}
+  .sess li.now{opacity:1;color:var(--ink);background:var(--markbg)}
+  .balance{font-family:var(--mono);font-size:.8rem;text-align:center;padding:10px;border:1px solid var(--rule);background:var(--card);border-radius:2px}
+  .balance b{font-size:1.4rem;display:block;margin-top:2px}
+
+  /* ---- quiz ---- */
+  .quiz{margin-top:34px;padding-left:calc(3.4rem + 16px)}
+  .quiz-h{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;display:flex;gap:10px;align-items:center}
+  .quiz-h::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .q{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:16px;margin-bottom:12px}
+  .q-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;color:var(--muted)}
+  .q-text{margin:6px 0 12px;font-size:.93rem;max-width:66ch}
+  .q pre.code{background:var(--panel)}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.88rem;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:9px 12px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:flex-start}
+  .opt:hover{border-color:var(--ink)}
+  .opt .tick{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex-shrink:0;padding-top:.1em}
+  .opt.right{background:var(--keepbg);border-color:var(--keep)}
+  .opt.right .tick{color:var(--keep)}
+  .opt.wrong{background:var(--dropbg);border-color:var(--drop)}
+  .opt.wrong .tick{color:var(--drop)}
+  .opt.locked{cursor:default}
+  .why{margin:12px 0 0;font-size:.87rem;color:var(--muted);border-left:2px solid var(--mark);padding-left:12px;display:none}
+  .why.show{display:block}
+  .why b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--rule);margin-top:20px;padding:32px 0 90px;font-size:.86rem;color:var(--muted);max-width:66ch}
+  footer b{color:var(--ink)}
+
+  @media (max-width:860px){
+    .engine-body,.demo-2col,.sessions{grid-template-columns:1fr}
+    .pane+.pane{border-left:none;border-top:1px solid var(--rule)}
+    .tier-btn{grid-template-columns:2.6rem minmax(0,1fr) 1.2rem}
+    .tier-sub{display:none}
+    .tier-intro,.quiz{padding-left:0}
+    .concept{grid-template-columns:1fr;gap:4px}
+    .cells{grid-template-columns:repeat(8,1fr)}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+
+  .backlink{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--muted);text-decoration:none;border:1px solid var(--rule);padding:5px 10px;border-radius:2px;display:inline-block;transition:.15s}
+  .backlink:hover{color:var(--ink);border-color:var(--ink)}
+  .pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--rule);margin-top:24px;padding:24px 0 90px}
+  .pager a{font-family:var(--mono);font-size:.75rem;color:var(--ink);text-decoration:none;border:1px solid var(--rule);padding:8px 14px;border-radius:2px;transition:.15s}
+  .pager a:hover{border-color:var(--ink);background:var(--panel)}
+  .pager .sp{flex:1}
+  .cards{border-top:1px solid var(--rule);margin-top:8px}
+  .card{display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:16px;align-items:baseline;
+        padding:20px 4px;border-bottom:1px solid var(--rule);text-decoration:none;color:inherit;transition:.15s}
+  .card:hover{background:var(--panel)}
+  .card:hover .card-name{text-decoration:underline;text-underline-offset:3px}
+  .card-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .card-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em;display:block}
+  .card-sub{font-size:.87rem;color:var(--muted);display:block;margin-top:2px}
+  .card-meta{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--muted);text-align:right;white-space:nowrap}
+  @media (max-width:860px){ .card{grid-template-columns:2.6rem minmax(0,1fr)} .card-meta{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap mast">
+  <p style="margin:0 0 14px"><a class="backlink" href="../index.html">&larr; Interview Prep home</a></p>
+  <p class="eyebrow">SQL · tiers 00&ndash;09 · 12 demos · 40 problems</p>
+  <h1>SQL, in the order things<br>actually depend on each other.</h1>
+  <p class="standfirst">Every tier has three parts: the concepts, a <strong>working demo</strong> you can drive, and problems that fail you honestly. The through-line is that almost every costly SQL mistake produces a <strong>plausible wrong number</strong>, not an error message &mdash; so each tier names its own silent failure.</p>
+</div>
+
+<div class="wrap">
+  <section class="engine" aria-label="Logical execution order">
+    <div class="engine-head">
+      <h2>Start here: the clause you write first runs fifth</h2>
+      <p>One query, seven stages. This model explains alias visibility, WHERE vs HAVING, and why LIMIT never makes an aggregate cheap.</p>
+    </div>
+    <div class="stages" id="stages"></div>
+    <div class="engine-body">
+      <div class="pane">
+        <p class="pane-label">Query</p>
+        <pre class="sqlblock" id="sql"></pre>
+        <p class="note" id="note"></p>
+      </div>
+      <div class="pane">
+        <p class="pane-label">Row set <span class="rowcount pane-label" id="rowcount" style="display:inline"></span></p>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctl" id="run">Run all steps</button>
+      <button class="ctl ghost" id="prev">Back</button>
+      <button class="ctl ghost" id="next">Next step</button>
+      <button class="ctl ghost" id="reset">Reset</button>
+    </div>
+  </section>
+
+  <p class="quiz-h" style="margin:44px 0 0">The ladder &mdash; 64 concepts across ten tiers</p>
+  <div class="cards"><a class="card" href="tier-00.html"><span class="card-num">00</span><span><span class="card-name">Mental models</span><span class="card-sub">Before any syntax at all</span></span><span class="card-meta">7 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-01.html"><span class="card-num">01</span><span><span class="card-name">Retrieval</span><span class="card-sub">One table, correctly</span></span><span class="card-meta">7 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-02.html"><span class="card-num">02</span><span><span class="card-name">Aggregation</span><span class="card-sub">Changing the grain on purpose</span></span><span class="card-meta">5 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-03.html"><span class="card-num">03</span><span><span class="card-name">Joins and set operations</span><span class="card-sub">Where wrong answers are born</span></span><span class="card-meta">6 concepts · 2 demos · 4 problems</span></a><a class="card" href="tier-04.html"><span class="card-num">04</span><span><span class="card-name">Composition</span><span class="card-sub">Queries built from queries</span></span><span class="card-meta">5 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-05.html"><span class="card-num">05</span><span><span class="card-name">Window functions</span><span class="card-sub">The real intermediate to advanced line</span></span><span class="card-meta">6 concepts · 2 demos · 4 problems</span></a><a class="card" href="tier-06.html"><span class="card-num">06</span><span><span class="card-name">Writing and modeling</span><span class="card-sub">From reader to owner</span></span><span class="card-meta">7 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-07.html"><span class="card-num">07</span><span><span class="card-name">Transactions and concurrency</span><span class="card-sub">Correctness when you are not alone</span></span><span class="card-meta">6 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-08.html"><span class="card-num">08</span><span><span class="card-name">Performance</span><span class="card-sub">Cost, not just correctness</span></span><span class="card-meta">8 concepts · 1 demo · 4 problems</span></a><a class="card" href="tier-09.html"><span class="card-num">09</span><span><span class="card-name">Production SQL</span><span class="card-sub">The parts courses skip</span></span><span class="card-meta">7 concepts · 1 demo · 4 problems</span></a></div>
+
+  <footer>
+    <b>Three real boundaries, not ten.</b> Beginner &rarr; intermediate is joining and aggregating without changing the grain. Intermediate &rarr; advanced is window functions plus reading an execution plan. Advanced &rarr; expert is correctness under concurrency and cost at scale. Everything else is dialect trivia you look up.
+    <br><br>Keep all eleven files in the same folder so the links work.
+  </footer>
+</div>
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const KW = new Set(('select from where group by having order limit offset join left right full inner outer cross on as and or not in is null distinct union all intersect except with recursive case when then else end over partition rows range groups between preceding following unbounded current row insert into values update set delete create table view materialized index merge using matched conflict do nothing returning begin commit rollback lateral exists asc desc fetch next only qualify filter grouping sets rollup cube explain analyze primary key foreign references unique check constraint default cast interval date timestamp timestamptz if for of level isolation read committed repeatable serializable unnest apply top nulls first last ilike like window add column temporary drop alter serial int text boolean numeric true false unknown').split(' '));
+const FNS = new Set(('sum count avg min max coalesce nullif row_number rank dense_rank ntile lag lead first_value last_value date_trunc extract array_agg string_agg listagg generate_series abs round concat greatest least now current_date current_timestamp length upper lower trim').split(' '));
+
+function hl(sql){
+  const re = /(--[^\n]*)|('(?:''|[^'])*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([\s\S])/g;
+  let out = '', m;
+  while ((m = re.exec(sql)) !== null){
+    if (m[1]) out += '<span class="cm">'+esc(m[1])+'</span>';
+    else if (m[2]) out += '<span class="str">'+esc(m[2])+'</span>';
+    else if (m[3]) out += '<span class="num">'+m[3]+'</span>';
+    else if (m[4]){
+      const w = m[4], lw = w.toLowerCase();
+      if (KW.has(lw)) out += '<span class="kw">'+esc(w)+'</span>';
+      else if (FNS.has(lw)) out += '<span class="fn">'+esc(w)+'</span>';
+      else out += esc(w);
+    }
+    else out += esc(m[5]);
+  }
+  return out;
+}
+const code = sql => '<pre class="code">'+hl(sql)+'</pre>';
+
+/* mini table renderer. rows = [{cells:[...], cls:'keep|drop|dim|hot|win|cur'}] */
+function tbl(cols, rows, caption){
+  let h = '';
+  if (caption) h += '<p class="tcap">'+esc(caption)+'</p>';
+  h += '<div class="tbox"><table class="t"><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+'</th>');
+  h += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    h += '<tr class="'+(r.cls||'')+'">';
+    r.cells.forEach((c,i) => {
+      const isNum = typeof c === 'number';
+      h += '<td class="'+(isNum?'num':'')+'">'+(c===null?'<span class="cm">NULL</span>':esc(c))+'</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+function btnRow(label, items, onPick, startIdx){
+  const wrap = document.createElement('div');
+  wrap.className = 'demo-bar';
+  if (label) wrap.innerHTML = '<span class="lab">'+esc(label)+'</span>';
+  const btns = items.map((it,i) => {
+    const b = document.createElement('button');
+    b.className = 'ctl ' + (i===startIdx ? 'on':'off');
+    b.textContent = it;
+    b.onclick = () => { btns.forEach((x,j)=> x.className='ctl '+(j===i?'on':'off')); onPick(i); };
+    wrap.appendChild(b);
+    return b;
+  });
+  return wrap;
+}
+
+/* ============================================================
+   EXECUTION ORDER ENGINE (top of page)
+   ============================================================ */
+const ROWS = [
+  {id:'r1',region:'West',amount:120,status:'paid'},   {id:'r2',region:'West',amount:40,status:'refunded'},
+  {id:'r3',region:'East',amount:300,status:'paid'},   {id:'r4',region:'East',amount:80,status:'paid'},
+  {id:'r5',region:'North',amount:25,status:'paid'},   {id:'r6',region:'West',amount:210,status:'paid'},
+  {id:'r7',region:'South',amount:90,status:'refunded'},{id:'r8',region:'East',amount:150,status:'paid'},
+  {id:'r9',region:'North',amount:60,status:'paid'},   {id:'r10',region:'South',amount:400,status:'paid'},
+  {id:'r11',region:'West',amount:15,status:'paid'},   {id:'r12',region:'South',amount:130,status:'paid'}
+];
+const SQL_LINES = [
+  {t:"SELECT region, SUM(amount) AS revenue", step:4},
+  {t:"FROM orders", step:0},
+  {t:"WHERE status = 'paid'", step:1},
+  {t:"GROUP BY region", step:2},
+  {t:"HAVING SUM(amount) > 200", step:3},
+  {t:"ORDER BY revenue DESC", step:5},
+  {t:"LIMIT 2;", step:6}
+];
+const STAGES = [
+  {label:'FROM', note:'<b>1 · FROM / JOIN.</b> The engine assembles the working set first. If a join here multiplies rows — one order matching three shipments — every SUM downstream is inflated and nothing errors.'},
+  {label:'WHERE', note:'<b>2 · WHERE.</b> Filters individual rows, before grouping exists. That is why <code>WHERE revenue &gt; 200</code> fails: the alias has not been created yet, and neither has the group.'},
+  {label:'GROUP BY', note:'<b>3 · GROUP BY.</b> The grain changes here. Twelve rows become four. From now on one output row represents many input rows, and any column not grouped or aggregated is undefined.'},
+  {label:'HAVING', note:'<b>4 · HAVING.</b> Filters groups, not rows. If a predicate can run before grouping, put it in WHERE — filtering 12 rows to 10 is cheaper than aggregating 12 and discarding groups.'},
+  {label:'SELECT', note:'<b>5 · SELECT.</b> Projection and aliasing happen fifth, despite being written first. This is the moment <code>revenue</code> starts to exist — so ORDER BY may use it and WHERE may not.'},
+  {label:'ORDER BY', note:'<b>6 · ORDER BY.</b> Rows have no inherent order until you impose one. A result that looks sorted without ORDER BY is an accident of the plan and will change.'},
+  {label:'LIMIT', note:'<b>7 · LIMIT.</b> Truncation is last. LIMIT 2 on a sorted aggregate still reads, groups and sorts everything first — it caps what is returned, not what is computed.'}
+];
+const G_ORDER = ['West','East','North','South'];
+const agg = rows => { const m=new Map(); rows.forEach(r=>m.set(r.region,(m.get(r.region)||0)+r.amount));
+  return G_ORDER.filter(g=>m.has(g)).map(g=>({id:'g_'+g,region:g,amount:m.get(g),agg:true})); };
+const paid=ROWS.filter(r=>r.status==='paid'), groups=agg(paid),
+      kept=groups.filter(g=>g.amount>200), sorted=[...kept].sort((a,b)=>b.amount-a.amount), limited=sorted.slice(0,2);
+const STATES=[
+  {rows:ROWS,mark:[],cols:3,grouped:false},{rows:paid,mark:['r2','r7'],cols:3,grouped:false},
+  {rows:groups,mark:[],cols:2,grouped:true},{rows:kept,mark:['g_North'],cols:2,grouped:true},
+  {rows:kept,mark:[],cols:2,grouped:true},{rows:sorted,mark:[],cols:2,grouped:true},
+  {rows:limited,mark:['g_West'],cols:2,grouped:true}
+];
+
+const gridEl=document.getElementById('grid'), sqlEl=document.getElementById('sql'),
+      noteEl=document.getElementById('note'), stagesEl=document.getElementById('stages'),
+      countEl=document.getElementById('rowcount');
+let step=0, timer=null;
+
+STAGES.forEach((s,i)=>{ const b=document.createElement('button');
+  b.className='stage'; b.type='button'; b.innerHTML='<span class="n">'+(i+1)+'</span>'+s.label;
+  b.onclick=()=>{stopE();goto(i);}; stagesEl.appendChild(b); });
+
+function rowEl(r,dropping,cols){
+  const d=document.createElement('div');
+  d.className='r'+(r.agg?' agg':'')+(dropping?' dropping':''); d.dataset.id=r.id;
+  d.innerHTML='<span class="id">'+(r.agg?'·':r.id)+'</span><span>'+r.region+'</span><span class="amt">'+
+    (r.agg?r.amount.toLocaleString():r.amount)+'</span><span class="st">'+(cols===3?r.status:(r.agg?'sum':''))+'</span>';
+  return d;
+}
+function mergeMarked(s){
+  const prev=STATES[step-1]?STATES[step-1].rows:[]; const ids=new Set(s.rows.map(r=>r.id));
+  const out=[]; prev.forEach(r=>{ if(ids.has(r.id)||s.mark.includes(r.id)) out.push(r); });
+  return out.length?out:s.rows;
+}
+function render(showMarked){
+  const s=STATES[step], before=new Map();
+  gridEl.querySelectorAll('.r').forEach(el=>before.set(el.dataset.id,el.getBoundingClientRect().top));
+  const list = (showMarked && s.mark.length && step>0) ? mergeMarked(s) : s.rows;
+  gridEl.innerHTML='';
+  list.forEach(r=>gridEl.appendChild(rowEl(r, showMarked && s.mark.includes(r.id), s.cols)));
+  gridEl.querySelectorAll('.r').forEach(el=>{
+    const p=before.get(el.dataset.id);
+    if(p!==undefined){ const dy=p-el.getBoundingClientRect().top;
+      if(Math.abs(dy)>1){ el.style.transition='none'; el.style.transform='translateY('+dy+'px)';
+        requestAnimationFrame(()=>{el.style.transition='';el.style.transform='';}); } }
+    else { el.classList.add('entering'); requestAnimationFrame(()=>el.classList.remove('entering')); }
+  });
+  countEl.textContent=list.length+(s.grouped?' groups':' rows');
+  sqlEl.innerHTML=SQL_LINES.map(l=>'<div class="line '+(l.step===step?'active':(l.step<step?'done':''))+'">'+hl(l.t)+'</div>').join('');
+  noteEl.innerHTML=STAGES[step].note;
+  [...stagesEl.children].forEach((b,i)=>b.setAttribute('aria-current',i===step?'true':'false'));
+  document.getElementById('prev').disabled=step===0;
+  document.getElementById('next').disabled=step===STATES.length-1;
+}
+function goto(i){
+  step=Math.max(0,Math.min(STATES.length-1,i));
+  if(STATES[step].mark.length && step>0){ render(true); setTimeout(()=>{ if(step===i) render(false); },780); }
+  else render(false);
+}
+function stopE(){ clearInterval(timer); timer=null; document.getElementById('run').textContent='Run all steps'; }
+document.getElementById('next').onclick=()=>{stopE();goto(step+1);};
+document.getElementById('prev').onclick=()=>{stopE();goto(step-1);};
+document.getElementById('reset').onclick=()=>{stopE();goto(0);};
+document.getElementById('run').onclick=function(){
+  if(timer){stopE();return;}
+  if(step===STATES.length-1) goto(0);
+  this.textContent='Pause';
+  timer=setInterval(()=>{ if(step>=STATES.length-1){stopE();return;} goto(step+1); },2100);
+};
+goto(0);
+
+</script>
+</body>
+</html>

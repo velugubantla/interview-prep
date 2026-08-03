@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design interview — master cheatsheet</title>
+<style>
+:root{
+  --paper:#FBFAF6; --ink:#16181C; --ink-2:#5A6068; --ink-3:#8A9099;
+  --grid:#D8E4EC; --rule:#C3CFD8; --panel:#FFFFFF;
+  --blue:#1F4E79; --blue-wash:#E8F0F6;
+  --amber:#9A6A05; --amber-wash:#FBF1DC;
+  --green:#2C6E49; --green-wash:#E6F1EA;
+  --red:#9B3226; --red-wash:#F7E9E7;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --ink:#E8EAED; --ink-2:#9BA3AC; --ink-3:#6C747D;
+    --grid:#1E252D; --rule:#2A333D; --panel:#171B21;
+    --blue:#79ACD6; --blue-wash:#16232F;
+    --amber:#D9A441; --amber-wash:#241D0F;
+    --green:#7FBF9A; --green-wash:#122019;
+    --red:#D98A7E; --red-wash:#241512;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:56px}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.65;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px}
+.sheet{max-width:1000px;margin:0 auto;padding:36px 24px 90px}
+header{border-bottom:2px solid var(--ink);padding-bottom:16px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+h1{font-family:var(--mono);font-size:28px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin:0}
+nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);
+  padding:9px 0;display:flex;gap:4px;flex-wrap:wrap}
+nav a{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;padding:4px 8px;white-space:nowrap;border-radius:2px}
+nav a:hover{color:var(--ink);background:var(--blue-wash)}
+h2{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:500;margin:48px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);scroll-margin-top:56px}
+h3{font-size:15px;font-weight:600;margin:26px 0 10px}
+p{margin:0 0 14px}
+ul{margin:0 0 16px;padding-left:20px}
+li{margin-bottom:6px}
+b,strong{font-weight:600}
+em{color:var(--ink-2)}
+code{font-family:var(--mono);font-size:.9em;background:var(--blue-wash);padding:1px 5px;border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 18px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;text-align:left;padding:0 10px 7px 0;border-bottom:1px solid var(--rule)}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+td:first-child{font-weight:500}
+.num td:last-child{font-family:var(--mono);white-space:nowrap;text-align:right;color:var(--ink-2)}
+blockquote{border-left:3px solid var(--blue);background:var(--blue-wash);padding:12px 16px;margin:0 0 16px;font-size:14px}
+blockquote p{margin:0 0 8px}
+blockquote p:last-child{margin:0}
+.lede{color:var(--ink-2);font-size:14px;margin:0 0 16px}
+.callout{border-left:3px solid var(--amber);background:var(--amber-wash);padding:12px 16px;margin:0 0 16px;font-size:14px}
+ol.rules{counter-reset:r;list-style:none;padding:0;margin:0}
+ol.rules li{counter-increment:r;padding:8px 0 8px 36px;position:relative;border-bottom:1px solid var(--rule)}
+ol.rules li::before{content:counter(r,decimal-leading-zero);position:absolute;left:0;top:9px;
+  font-family:var(--mono);font-size:12px;color:var(--blue);font-weight:600}
+footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+.back{display:inline-block;margin-bottom:16px;font-family:var(--mono);font-size:12px;color:var(--ink-2);text-decoration:none}
+.back:hover{color:var(--blue)}
+@media print{body{background:#fff}nav{display:none}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<a class="back" href="../index.html">&larr; Interview Prep home</a>
+<header>
+  <div class="eyebrow">FAANG-tier loops / senior roles / phased plan</div>
+  <h1>System design interview &mdash; master cheatsheet</h1>
+  <p class="sub">Target: Senior Staff / Principal / Architect. Everything that gets graded, in one document.</p>
+</header>
+
+<nav>
+  <a href="#graded">0 Grading</a><a href="#clock">1 Clock</a><a href="#numbers">2 Numbers</a>
+  <a href="#concepts">3 Concepts</a><a href="#problems">4 Problems</a><a href="#tradeoffs">5 Tradeoffs</a>
+  <a href="#schedule">6 Schedule</a><a href="#materials">7 Materials</a><a href="#onepager">8 One-pager</a>
+</nav>
+
+<h2 id="graded">0. How you are actually graded</h2>
+<p class="lede">Four signals, weighted roughly equally. Most rejections are on 1 and 4, not 2.</p>
+<table>
+  <tr><th>Signal</th><th>What &ldquo;strong hire&rdquo; looks like</th></tr>
+  <tr><td>Requirements &amp; scoping</td><td>You narrowed an open-ended prompt to a designable problem in &lt;8 min, stated functional + non-functional requirements, and got explicit agreement before designing</td></tr>
+  <tr><td>High-level design</td><td>A coherent end-to-end architecture, drawn in one pass, with data flowing through it. No orphan boxes</td></tr>
+  <tr><td>Deep dive</td><td>You went two or three levels below the box the interviewer picked, and knew the failure modes</td></tr>
+  <tr><td>Tradeoff articulation</td><td>For every meaningful decision, you named the alternative and why you rejected it &mdash; <em>unprompted</em></td></tr>
+</table>
+<p><b>The level distinction that matters to you:</b></p>
+<ul>
+  <li><b>L4/L5</b> &mdash; graded on coverage. Did they remember to cache, shard, queue?</li>
+  <li><b>L6</b> &mdash; graded on depth + tradeoffs. Can they defend one decision under sustained pushback?</li>
+  <li><b>L7</b> &mdash; graded on <em>problem framing</em>. Do they challenge the requirement itself? Do they discuss org/ownership boundaries, migration from the existing system, and what they'd build vs. buy? An L7 who designs a beautiful greenfield system without asking &ldquo;what exists today and how do we get there&rdquo; has failed the round.</li>
+</ul>
+<div class="callout"><b>Silent killers:</b> designing before scoping &middot; never stating a number &middot; one-way monologue &middot; no failure discussion &middot; defending a choice by naming a company that uses it (&ldquo;Netflix does this&rdquo;) instead of by reasoning &middot; over-engineering a problem that doesn't need it.</div>
+
+<h2 id="clock">1. The 45-minute clock</h2>
+<p class="lede">Rehearse this until it's muscle memory. It is the fix for &ldquo;I discover the levers mid-flight.&rdquo;</p>
+<table>
+  <tr><th>Time</th><th>Phase</th><th>Output</th></tr>
+  <tr><td>0&ndash;5</td><td><b>Clarify</b></td><td>Functional requirements (3&ndash;5 bullets), explicit non-goals</td></tr>
+  <tr><td>5&ndash;8</td><td><b>Quantify</b></td><td>Scale, QPS, storage, latency SLO, consistency requirement. <em>Say the numbers out loud.</em></td></tr>
+  <tr><td>8&ndash;12</td><td><b>API + data model</b></td><td>3&ndash;5 endpoints, core entities, access patterns. Access patterns drive the store &mdash; always.</td></tr>
+  <tr><td>12&ndash;25</td><td><b>High-level design</b></td><td>Draw it. Client &rarr; edge &rarr; services &rarr; storage &rarr; async path &rarr; analytics</td></tr>
+  <tr><td>25&ndash;38</td><td><b>Deep dive</b></td><td>Interviewer picks, or you offer: &ldquo;the two risky parts here are X and Y &mdash; which?&rdquo;</td></tr>
+  <tr><td>38&ndash;43</td><td><b>Failure, scale, ops</b></td><td>What breaks first, how you detect it, how you degrade</td></tr>
+  <tr><td>43&ndash;45</td><td><b>Wrap</b></td><td>Recap the 2&ndash;3 decisions that defined the design and what you'd revisit</td></tr>
+</table>
+<p><b>Opening script (memorize the shape):</b></p>
+<blockquote><p>&ldquo;Let me make sure I'm solving the right problem. I'll assume we're building X for Y users, and I'll treat A, B, C as in scope and D, E as out of scope. On non-functionals I'm going to prioritize [availability over consistency / read latency over write latency] &mdash; does that match what you want me to optimize? Let me put some numbers on it before I draw anything.&rdquo;</p></blockquote>
+<p><b>Bail-out phrase when you don't know something:</b></p>
+<blockquote>
+<p>&ldquo;I don't have deep hands-on with [X]. What I'd reason from first principles is&hellip; and the thing I'd want to validate before committing is&hellip;&rdquo;</p>
+<p>This scores <em>better</em> than bluffing. Bluffing at L6+ is an automatic no-hire when caught.</p>
+</blockquote>
+
+<h2 id="numbers">2. Numbers you must know cold</h2>
+<h3>Latency ladder (order of magnitude is what matters)</h3>
+<table class="num">
+  <tr><th>Operation</th><th>Time</th></tr>
+  <tr><td>L1 cache reference</td><td>1 ns</td></tr>
+  <tr><td>Branch mispredict</td><td>3 ns</td></tr>
+  <tr><td>L2 cache reference</td><td>4 ns</td></tr>
+  <tr><td>Mutex lock/unlock</td><td>17 ns</td></tr>
+  <tr><td>Main memory reference</td><td>100 ns</td></tr>
+  <tr><td>Compress 1 KB (Zippy)</td><td>2 &mu;s</td></tr>
+  <tr><td>Read 1 MB sequentially from memory</td><td>3 &mu;s</td></tr>
+  <tr><td>Send 1 KB over 1 Gbps</td><td>10 &mu;s</td></tr>
+  <tr><td>SSD random read</td><td>16 &mu;s</td></tr>
+  <tr><td>Read 1 MB sequentially from SSD</td><td>49 &mu;s</td></tr>
+  <tr><td>Round trip within same datacenter</td><td>500 &mu;s</td></tr>
+  <tr><td>Read 1 MB sequentially from disk</td><td>825 &mu;s</td></tr>
+  <tr><td>Disk seek</td><td>2 ms</td></tr>
+  <tr><td>Round trip CA &rarr; Netherlands</td><td>150 ms</td></tr>
+</table>
+<h3>Rules of thumb</h3>
+<ul>
+  <li>1 day &asymp; 86,400 s &asymp; <b>10<sup>5</sup> s</b>. Memorize this; every QPS calc uses it.</li>
+  <li>1 M writes/day &asymp; 12 writes/s. 100 M/day &asymp; 1,200/s. 1 B/day &asymp; 12 K/s.</li>
+  <li>Peak = 2&ndash;5&times; average. Use 3&times; unless told otherwise.</li>
+  <li>1 KB &times; 1 M = 1 GB. 1 KB &times; 1 B = 1 TB.</li>
+  <li>Commodity node: ~64 GB RAM, ~2 TB usable SSD, ~10 K&ndash;50 K simple QPS, ~1 Gbps NIC.</li>
+  <li>A single well-indexed Postgres primary: comfortably 5&ndash;10 K writes/s, tens of thousands of reads/s. <b>Do not shard below this.</b> Saying &ldquo;we don't need to shard yet&rdquo; is a senior signal.</li>
+  <li>Cache hit rate 80&ndash;95% is realistic. 99% is a claim you must justify.</li>
+  <li>Availability: 99.9% = 8.7 h/yr down. 99.99% = 52 min. 99.999% = 5 min. Each nine roughly 10&times; the cost.</li>
+</ul>
+<h3>The estimation sequence (always this order)</h3>
+<ol>
+  <li>DAU &rarr; requests/user/day &rarr; <b>average QPS</b> &rarr; <b>peak QPS</b></li>
+  <li>Payload size &rarr; <b>bytes/s ingest</b> &rarr; <b>storage/year</b> &rarr; &times; replication factor</li>
+  <li>Read:write ratio &rarr; <b>read QPS</b> &rarr; cache working set (20% of a day's reads)</li>
+  <li>Storage &divide; per-node capacity &rarr; <b>shard count</b></li>
+  <li>State which dimension <em>dominates</em> &mdash; that dimension is the design.</li>
+</ol>
+
+<h2 id="concepts">3. Concept mastery checklist</h2>
+<h3>Tier 1 &mdash; do not skip. Every one of these can be a full deep dive.</h3>
+<p><b>Networking &amp; protocols</b></p>
+<ul>
+  <li>DNS resolution, anycast, GeoDNS</li>
+  <li>TCP vs UDP; connection setup cost; keep-alive; head-of-line blocking</li>
+  <li>TLS handshake cost and termination point</li>
+  <li>HTTP/1.1 vs HTTP/2 (multiplexing) vs HTTP/3 (QUIC)</li>
+  <li>gRPC vs REST vs GraphQL &mdash; when each is right</li>
+  <li>Real-time: long polling vs SSE vs WebSockets &mdash; <b>know the tradeoff table</b></li>
+</ul>
+<p><b>Load balancing &amp; routing</b></p>
+<ul>
+  <li>L4 vs L7; when you need L7</li>
+  <li>Algorithms: round robin, least connections, consistent hashing, power-of-two-choices</li>
+  <li>Health checks, connection draining, sticky sessions (and why to avoid them)</li>
+  <li>API gateway responsibilities: authn, rate limit, routing, aggregation</li>
+</ul>
+<p><b>Caching</b></p>
+<ul>
+  <li>Placement: client, CDN, edge, application, database</li>
+  <li>Patterns: cache-aside, read-through, write-through, write-behind, refresh-ahead</li>
+  <li>Eviction: LRU, LFU, TTL, ARC</li>
+  <li><b>Failure modes:</b> thundering herd / cache stampede (fix: request coalescing, jittered TTL, probabilistic early expiry), hot key (fix: key splitting, local L1), cache penetration (fix: negative caching, bloom filter), cold start after deploy</li>
+  <li>Invalidation strategies and why it's genuinely the hard problem</li>
+</ul>
+<p><b>Storage internals</b></p>
+<ul>
+  <li>B-tree vs LSM-tree: read/write amplification, when each wins</li>
+  <li>Indexes: clustered vs secondary, covering index, composite index column order</li>
+  <li>ACID; <b>isolation levels</b> (read committed, repeatable read, snapshot, serializable) and the anomaly each prevents</li>
+  <li>MVCC, write-ahead log</li>
+  <li>SQL vs document vs wide-column vs key-value vs graph &mdash; chosen by <em>access pattern</em>, never by fashion</li>
+</ul>
+<p><b>Replication</b></p>
+<ul>
+  <li>Single-leader, multi-leader, leaderless (Dynamo-style)</li>
+  <li>Sync vs async vs semi-sync; replication lag and read-your-writes</li>
+  <li>Quorum: <b>W + R &gt; N</b>; sloppy quorum, hinted handoff</li>
+  <li>Failover, split-brain, fencing tokens</li>
+  <li>Conflict resolution: LWW, vector clocks, CRDTs</li>
+</ul>
+<p><b>Partitioning / sharding</b></p>
+<ul>
+  <li>Range vs hash vs directory-based</li>
+  <li><b>Consistent hashing</b> with virtual nodes &mdash; be able to draw the ring and explain rebalancing</li>
+  <li>Hot shard / celebrity problem</li>
+  <li>Resharding without downtime (double-write + backfill + cutover)</li>
+  <li>Cross-shard queries and why they're the tax you pay</li>
+</ul>
+<p><b>Consistency &amp; consensus</b></p>
+<ul>
+  <li>CAP &mdash; state it <em>correctly</em> (it's about behavior during partition, not a menu you pick from at design time). <b>PACELC</b> is the better framing and saying so is a senior signal.</li>
+  <li>The consistency ladder: linearizable &rarr; sequential &rarr; causal &rarr; read-your-writes &rarr; monotonic reads &rarr; eventual</li>
+  <li>Raft (leader election, log replication, commit index) at a conceptual level; Paxos by name only</li>
+  <li>Where consensus actually appears: leader election, config/metadata store, distributed lock (ZooKeeper, etcd, Chubby)</li>
+  <li>Distributed transactions: 2PC and why it blocks; <b>Saga</b> (orchestration vs choreography) with compensating actions; <b>transactional outbox</b></li>
+  <li>Idempotency keys, exactly-once as an illusion (it's at-least-once + idempotent consumer)</li>
+</ul>
+<p><b>Messaging &amp; streaming</b></p>
+<ul>
+  <li>Queue vs log (SQS/RabbitMQ vs Kafka/Kinesis) &mdash; competing consumers vs replayable ordered log</li>
+  <li>Kafka model: topic, partition, offset, consumer group, ordering guarantee <em>per partition only</em></li>
+  <li>Delivery semantics: at-most-once, at-least-once, effectively-once</li>
+  <li>Backpressure, dead letter queue, poison message, consumer lag as the key metric</li>
+  <li>Fan-out on write vs fan-out on read (<b>this single tradeoff shows up in half the canonical problems</b>)</li>
+</ul>
+<p><b>Resilience patterns</b></p>
+<ul>
+  <li>Timeouts (always), retries <b>with exponential backoff + jitter</b>, retry budgets</li>
+  <li>Circuit breaker, bulkhead, load shedding, graceful degradation</li>
+  <li>Rate limiting: token bucket, leaky bucket, fixed window, sliding window log, sliding window counter &mdash; and how to make it work distributed</li>
+  <li>Idempotency, at-least-once + dedupe</li>
+  <li>Failure domains, blast radius, cell-based architecture</li>
+</ul>
+<h3>Tier 2 &mdash; know well enough to deep-dive on one</h3>
+<ul>
+  <li><b>Search:</b> inverted index, tokenization, TF-IDF/BM25, Elasticsearch sharding, near-real-time indexing</li>
+  <li><b>Geospatial:</b> geohash, quadtree, S2 cells, R-tree &mdash; plus the &ldquo;find drivers near me&rdquo; pattern</li>
+  <li><b>Probabilistic structures:</b> Bloom filter, HyperLogLog, Count-Min Sketch, Top-K. Know <em>when</em> each buys you memory</li>
+  <li><b>Object storage + CDN:</b> presigned URLs, multipart upload, chunking, cache-control, edge invalidation</li>
+  <li><b>Time series:</b> downsampling, rollups, retention tiers, columnar storage</li>
+  <li><b>Data engineering:</b> CDC, batch vs stream, event-time vs processing-time, watermarks, lambda vs kappa</li>
+  <li><b>Observability:</b> RED/USE metrics, distributed tracing, structured logs, SLI/SLO/error budget</li>
+  <li><b>Security:</b> OAuth2/OIDC, JWT vs session, encryption in transit and at rest, secrets management, least privilege</li>
+</ul>
+<h3>Tier 3 &mdash; bonus, only if it's directly relevant</h3>
+<ul>
+  <li>Vector databases, ANN indexes (HNSW, IVF), embedding pipelines, RAG serving &mdash; <b>treat this as Tier 1</b> if your background invites ML-infra-flavored prompts</li>
+  <li>Feature stores, online/offline skew</li>
+  <li>Multi-tenancy isolation models</li>
+  <li>Cell-based / shuffle sharding</li>
+</ul>
+
+<h2 id="problems">4. The canonical problems</h2>
+<p class="lede">Study them by <b>pattern</b>, not by name. Each row's third column is the thing the interviewer is actually testing.</p>
+<table>
+  <tr><th>#</th><th>Problem</th><th>Pattern</th><th>The real test</th></tr>
+  <tr><td>1</td><td>URL shortener</td><td>Key generation + KV at scale</td><td>Can you keep it simple? Over-engineering here is a red flag</td></tr>
+  <tr><td>2</td><td>Pastebin / file store</td><td>Blob + metadata split</td><td>Never store the blob in the row</td></tr>
+  <tr><td>3</td><td>Rate limiter</td><td>Distributed counters</td><td>Algorithm choice + where state lives</td></tr>
+  <tr><td>4</td><td>Web crawler</td><td>Frontier + politeness + dedupe</td><td>Bloom filters, backpressure, trap detection</td></tr>
+  <tr><td>5</td><td>Twitter / news feed</td><td><b>Fan-out on write vs read</b></td><td>Hybrid for celebrities. This is the single most-asked tradeoff</td></tr>
+  <tr><td>6</td><td>Instagram</td><td>Feed + media</td><td>Combines #2 and #5</td></tr>
+  <tr><td>7</td><td>WhatsApp / chat</td><td>Connection state, delivery receipts</td><td>WebSocket fanout, presence, ordering, offline queue</td></tr>
+  <tr><td>8</td><td>Notification system</td><td>Multi-channel fan-out</td><td>Idempotency, retries, user preferences, throttling</td></tr>
+  <tr><td>9</td><td>YouTube / Netflix</td><td>Transcoding pipeline + CDN</td><td>Async pipeline, adaptive bitrate, storage tiering</td></tr>
+  <tr><td>10</td><td>Google Drive / Dropbox</td><td>Sync + chunking</td><td>Delta sync, conflict resolution, dedupe</td></tr>
+  <tr><td>11</td><td>Uber / Lyft</td><td>Geospatial matching</td><td>Geohash/quadtree, driver location write amplification</td></tr>
+  <tr><td>12</td><td>Yelp / proximity search</td><td>Geo index + ranking</td><td>Read-heavy geo, denormalization</td></tr>
+  <tr><td>13</td><td>Ticketmaster</td><td><b>Inventory + contention</b></td><td>Distributed locking, reservation TTL, overselling</td></tr>
+  <tr><td>14</td><td>Payment system</td><td><b>Correctness over availability</b></td><td>Idempotency, ledger, saga, exactly-once semantics, reconciliation</td></tr>
+  <tr><td>15</td><td>Google Docs</td><td>Collaborative editing</td><td>OT vs CRDT &mdash; know the difference conceptually</td></tr>
+  <tr><td>16</td><td>Search autocomplete</td><td>Trie + ranking</td><td>Precomputation, top-K, update lag</td></tr>
+  <tr><td>17</td><td>Ad click aggregation</td><td>Streaming analytics</td><td>Event-time windows, late data, exactly-once counting</td></tr>
+  <tr><td>18</td><td>Distributed job scheduler</td><td>Leader election + at-least-once</td><td>Consensus, lease, idempotent execution</td></tr>
+  <tr><td>19</td><td>Metrics/monitoring system</td><td>Time-series ingest</td><td>Cardinality explosion, downsampling</td></tr>
+  <tr><td>20</td><td>ML feature/inference serving</td><td>Online/offline skew, caching</td><td><em>A differentiator for ML-background candidates &mdash; prepare it properly</em></td></tr>
+</table>
+<div class="callout"><b>Cross-cutting patterns to name explicitly when they appear:</b> fan-out on write vs read &middot; write-ahead log + async materialization &middot; CQRS &middot; outbox &middot; idempotency key &middot; consistent hashing &middot; leader election &middot; precompute vs compute-on-read &middot; hot/cold tiering.</div>
+
+<h2 id="tradeoffs">5. Tradeoff table (rehearse saying these out loud)</h2>
+<table>
+  <tr><th>Decision</th><th>Pick A when</th><th>Pick B when</th></tr>
+  <tr><td>SQL vs NoSQL</td><td>Relations, transactions, unknown query patterns</td><td>Known access patterns, extreme scale on one dimension</td></tr>
+  <tr><td>Normalize vs denormalize</td><td>Write-heavy, consistency matters</td><td>Read-heavy, latency matters</td></tr>
+  <tr><td>Sync vs async</td><td>Caller needs the result to proceed</td><td>Caller can be told &ldquo;accepted&rdquo;</td></tr>
+  <tr><td>Strong vs eventual</td><td>Money, inventory, auth</td><td>Feeds, counts, social graphs</td></tr>
+  <tr><td>Fan-out write vs read</td><td>Read-heavy, bounded followers</td><td>Write-heavy or celebrity skew (&rarr; hybrid)</td></tr>
+  <tr><td>Cache-aside vs write-through</td><td>Read-heavy, tolerate staleness</td><td>Need cache and DB coherent</td></tr>
+  <tr><td>Monolith vs services</td><td>Small team, unclear boundaries</td><td>Independent scaling <em>and</em> independent teams</td></tr>
+  <tr><td>Push vs pull</td><td>Low latency, few consumers</td><td>Many consumers, consumer-paced</td></tr>
+  <tr><td>Single region vs multi</td><td>Cost-sensitive, RTO tolerant</td><td>Regulatory or true global latency need</td></tr>
+</table>
+
+<h2 id="schedule">6. The phased schedule</h2>
+<p><b>Phases 1&ndash;2 &mdash; Primitives (no mock problems yet).</b><br>
+Read <em>Designing Data-Intensive Applications</em> cover to cover &mdash; Ch. 5&ndash;9 twice. Add the DDIA-adjacent papers: Dynamo, Bigtable, GFS, Kafka, Spanner, MapReduce. Goal: you can explain replication, partitioning, and consistency without reaching for an example system.</p>
+<p><b>Phase 3 &mdash; Framework + estimation.</b><br>
+Drill the 45-min structure. 20 timed estimation reps. Build the muscle of stating a number before drawing a box.</p>
+<p><b>Phase 4 &mdash; Canonical problems.</b><br>
+5 per week. Write your own answer <em>cold</em> on paper first (45 min, timed), then compare against a reference. The writing-cold step is non-negotiable &mdash; reading solutions creates false confidence.</p>
+<p><b>Phase 5 &mdash; Mocks. Minimum 12, with real engineers.</b><br>
+This is the phase that decides the outcome and the one people skip. Record them. Watch yourself. You are looking for: did I scope before designing, did I state numbers, did I name alternatives unprompted, did I talk more than 70% of the time (bad).</p>
+<p><b>Phase 6 &mdash; Weak spots + the rest of the loop.</b><br>
+Deep dives on your two weakest Tier-1 areas. Plus: coding still exists at L6 (LeetCode medium, ~150 problems, patterns not volume), and at L7 the behavioral/leadership rounds carry more weight than system design.</p>
+<div class="callout"><b>Weekly cadence throughout:</b> 6&ndash;8 focused hours. Sunday review of every mistake from that week. A one-page written summary per problem you solve &mdash; writing is what makes it stick.</div>
+
+<h2 id="materials">7. Materials</h2>
+<p><b>Primary</b></p>
+<ul>
+  <li><em>Designing Data-Intensive Applications</em>, Kleppmann &mdash; the single highest-ROI text. Non-optional.</li>
+  <li><em>System Design Interview</em> Vol. 1 &amp; 2, Alex Xu &mdash; problem coverage and structure</li>
+  <li>Educative: <em>Grokking the Modern System Design Interview</em></li>
+  <li>ByteByteGo (Xu's newsletter/videos) &mdash; good for pattern recall</li>
+</ul>
+<p><b>Papers</b> (skim for the idea, don't grind)<br>
+Dynamo &middot; Bigtable &middot; GFS &middot; MapReduce &middot; Spanner &middot; Kafka &middot; Raft (extended) &middot; Chubby &middot; Borg &middot; Cassandra</p>
+<p><b>Engineering blogs</b> &mdash; Netflix, Uber, Airbnb, Stripe, Discord, Cloudflare, Meta. Read for <em>how they explain tradeoffs</em>, which is the exact skill being graded.</p>
+<p><b>Mocks</b> &mdash; interviewing.io (real FAANG interviewers, best signal), Pramp, or a peer group. Budget for this; it's the highest-ROI spend.</p>
+
+<h2 id="onepager">8. Pre-interview one-pager</h2>
+<p class="lede">Read this 20 minutes before the round.</p>
+<ol class="rules">
+  <li>Scope before you design. Get explicit agreement.</li>
+  <li>Say a number in the first 8 minutes.</li>
+  <li>Draw the happy path end to end before you optimize anything.</li>
+  <li>For every choice, name the alternative and why you rejected it &mdash; before being asked.</li>
+  <li>Offer the deep dive: &ldquo;the two risky parts are X and Y &mdash; which do you want?&rdquo;</li>
+  <li>Discuss what breaks first and how you'd detect it.</li>
+  <li>Say &ldquo;I don't know&rdquo; when you don't. Then reason from first principles.</li>
+  <li>Stop talking. Check in every few minutes. It's a collaboration, not a lecture.</li>
+  <li>Don't over-engineer. &ldquo;At this scale a single primary is fine&rdquo; is a strong-hire sentence.</li>
+  <li>Close by recapping the 2&ndash;3 decisions that defined the design.</li>
+</ol>
+
+<footer>Converted from <code>cheatsheet.md</code> (kept alongside this file). Companion pages: master reference, wall chart, interactive demos.</footer>
+
+</div>
+</body>
+</html>

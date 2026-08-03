@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Back-of-envelope capacity estimator</title>
+<style>
+/* ── Shell added to make this Claude artifact fragment standalone. Original content untouched below. ── */
+:root{
+  --paper:#FBFAF6; --surface-1:#FFFFFF;
+  --border:#C3CFD8; --border-strong:#8A9099;
+  --text-primary:#16181C; --text-secondary:#5A6068; --text-muted:#8A9099;
+  --bg-accent:#E8F0F6; --text-accent:#1F4E79; --border-accent:#1F4E79;
+  --fill-accent:#1F4E79; --on-accent:#FFFFFF;
+  --bg-warning:#FBF1DC; --text-warning:#9A6A05; --border-warning:#9A6A05;
+  --bg-success:#E6F1EA; --text-success:#2C6E49; --border-success:#2C6E49;
+  --bg-danger:#F7E9E7; --text-danger:#9B3226;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --surface-1:#171B21;
+    --border:#2A333D; --border-strong:#6C747D;
+    --text-primary:#E8EAED; --text-secondary:#9BA3AC; --text-muted:#6C747D;
+    --bg-accent:#16232F; --text-accent:#79ACD6; --border-accent:#79ACD6;
+    --fill-accent:#79ACD6; --on-accent:#12151A;
+    --bg-warning:#241D0F; --text-warning:#D9A441; --border-warning:#D9A441;
+    --bg-success:#122019; --text-success:#7FBF9A; --border-success:#7FBF9A;
+    --bg-danger:#241512; --text-danger:#D98A7E;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text-primary);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6}
+.shell-wrap{max-width:880px;margin:0 auto;padding:36px 22px 72px}
+.shell-head{border-bottom:2px solid var(--text-primary);padding-bottom:14px;margin-bottom:8px}
+.shell-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.shell-head h1{font-family:var(--font-mono);font-size:24px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.shell-head p{color:var(--text-secondary);font-size:14px;margin:0}
+.shell-back{display:inline-block;margin-bottom:18px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);text-decoration:none}
+.shell-back:hover{color:var(--text-accent)}
+</style>
+</head>
+<body>
+<div class="shell-wrap">
+<a class="shell-back" href="../index.html">&larr; Interview Prep home</a>
+<div class="shell-head">
+  <div class="shell-eyebrow">System design / drill</div>
+  <h1>Back-of-envelope capacity estimator</h1>
+  <p>DAU to QPS, bandwidth, storage, cache and shards - and which dimension dominates.</p>
+</div><style>
+.sl{display:grid;grid-template-columns:150px 1fr 92px;align-items:center;gap:12px;margin-bottom:9px}
+.sl label{font-size:13px;color:var(--text-secondary)}
+.sl .v{font-size:13px;font-family:var(--font-mono);text-align:right;color:var(--text-primary)}
+.mc{background:var(--surface-1);border-radius:var(--radius);padding:13px 15px;transition:background .25s}
+.mc .k{font-size:12px;color:var(--text-secondary)}
+.mc .n{font-size:23px;font-weight:500;font-family:var(--font-mono);margin-top:3px;transition:color .25s}
+.mc .m{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-top:4px}
+.mc.hot{background:var(--bg-warning)}
+.mc.hot .n{color:var(--text-warning)}
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Interactive capacity estimator converting daily active users, write rate, read ratio, payload size and retention into queries per second, bandwidth, storage, cache size and shard count, and naming which dimension dominates the design.</h2>
+<div style="margin:1rem 0 1.25rem">
+<div class="sl"><label>Daily active users</label><input type="range" id="s1" min="4" max="9" step="1" value="7"><span class="v" id="o1"></span></div>
+<div class="sl"><label>Writes per user per day</label><input type="range" id="s2" min="1" max="200" step="1" value="10"><span class="v" id="o2"></span></div>
+<div class="sl"><label>Read : write ratio</label><input type="range" id="s3" min="1" max="500" step="1" value="100"><span class="v" id="o3"></span></div>
+<div class="sl"><label>Payload per write</label><input type="range" id="s4" min="1" max="5" step="1" value="2"><span class="v" id="o4"></span></div>
+<div class="sl"><label>Retention</label><input type="range" id="s5" min="1" max="10" step="1" value="5"><span class="v" id="o5"></span></div>
+<div class="sl"><label>Peak multiplier</label><input type="range" id="s6" min="2" max="10" step="1" value="3"><span class="v" id="o6"></span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px">
+<div class="mc" id="cw"><div class="k">Write QPS</div><div class="n" id="r1"></div><div class="m" id="m1"></div></div>
+<div class="mc" id="cr"><div class="k">Read QPS</div><div class="n" id="r2"></div><div class="m" id="m2"></div></div>
+<div class="mc" id="cb"><div class="k">Ingest bandwidth</div><div class="n" id="r3"></div><div class="m" id="m3"></div></div>
+<div class="mc" id="cs"><div class="k">Storage at retention</div><div class="n" id="r4"></div><div class="m" id="m4"></div></div>
+<div class="mc"><div class="k">Hot cache set</div><div class="n" id="r5"></div><div class="m">1 day reads, 20% hot</div></div>
+<div class="mc"><div class="k">Shards</div><div class="n" id="r6"></div><div class="m">2 TB usable per node</div></div>
+</div>
+<div style="background:var(--bg-accent);border-radius:var(--radius);padding:13px 16px;margin-top:12px">
+<div style="font-size:12px;color:var(--text-accent);margin-bottom:4px">What dominates</div>
+<div id="vd" style="font-size:14px;line-height:1.6"></div></div>
+<script>
+const D={4:['10 K',1e4],5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const Y={1:['1 KB text',1024],2:['10 KB record',10240],3:['100 KB thumb',102400],4:['500 KB image',512000],5:['3 MB media',3145728]};
+const g=i=>document.getElementById(i);
+function f(n,u){const s=['','K','M','G','T','P','E'];let i=0;while(Math.abs(n)>=1000&&i<6){n/=1000;i++}return (n>=100?Math.round(n):Number(n.toFixed(1))).toLocaleString()+' '+s[i]+u;}
+function go(){
+const d=D[s1.value],w=+s2.value,rw=+s3.value,y=Y[s4.value],ret=+s5.value,pk=+s6.value;
+o1.textContent=d[0];o2.textContent=w;o3.textContent=rw+' : 1';o4.textContent=y[0];o5.textContent=ret+' yr';o6.textContent=pk+'\u00d7';
+const wq=d[1]*w/86400,rq=wq*rw,bps=wq*y[1],yr=bps*31536000,tot=yr*ret,rep=tot*3;
+g('r1').textContent=f(wq,'');g('m1').textContent='peak '+f(wq*pk,'');
+g('r2').textContent=f(rq,'');g('m2').textContent='peak '+f(rq*pk,'');
+g('r3').textContent=f(bps*8,'bps');g('m3').textContent=f(bps,'B')+' / s';
+g('r4').textContent=f(tot,'B');g('m4').textContent='\u00d73 replicas = '+f(rep,'B');
+g('r5').textContent=f(rq*86400*y[1]*0.2,'B');
+g('r6').textContent=Math.max(1,Math.ceil(rep/2e12)).toLocaleString();
+const sc={cw:wq/5000,cr:rq/100000,cb:bps/1.25e8,cs:rep/5e13};
+const top=Object.keys(sc).reduce((a,b)=>sc[a]>sc[b]?a:b);
+Object.keys(sc).forEach(k=>g(k).classList.toggle('hot',k===top&&sc[top]>1));
+let v;
+if(sc[top]<=1)v='Nothing dominates yet. One well-indexed primary plus a cache is a legitimate answer here \u2014 say that out loud. Reaching for shards at this scale is the most common over-engineering tell.';
+else if(top==='cb')v='Payload and bandwidth dominate. This is a blob store plus CDN problem: metadata in the database, bytes in object storage, presigned uploads. Never put the object in the row.';
+else if(top==='cr')v='Reads dominate. The cache tier and read replicas are the design; the write path is almost incidental. Expect the deep dive to be invalidation, hot keys and stampede protection.';
+else if(top==='cw')v='Writes dominate. A single leader will not absorb this. Partitioning strategy and a log-structured store are the conversation, and the follow-up will be resharding without downtime.';
+else v='Storage dominates. Retention policy, tiering and compaction are the real design, not QPS. Asking whether you are allowed to delete anything reads as senior.';
+g('vd').textContent=v;}
+[s1,s2,s3,s4,s5,s6].forEach(x=>x.oninput=go);go();
+</script>
+</div>
+</body>
+</html>

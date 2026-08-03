@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 45-minute interview clock</title>
+<style>
+/* ── Shell added to make this Claude artifact fragment standalone. Original content untouched below. ── */
+:root{
+  --paper:#FBFAF6; --surface-1:#FFFFFF;
+  --border:#C3CFD8; --border-strong:#8A9099;
+  --text-primary:#16181C; --text-secondary:#5A6068; --text-muted:#8A9099;
+  --bg-accent:#E8F0F6; --text-accent:#1F4E79; --border-accent:#1F4E79;
+  --fill-accent:#1F4E79; --on-accent:#FFFFFF;
+  --bg-warning:#FBF1DC; --text-warning:#9A6A05; --border-warning:#9A6A05;
+  --bg-success:#E6F1EA; --text-success:#2C6E49; --border-success:#2C6E49;
+  --bg-danger:#F7E9E7; --text-danger:#9B3226;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --surface-1:#171B21;
+    --border:#2A333D; --border-strong:#6C747D;
+    --text-primary:#E8EAED; --text-secondary:#9BA3AC; --text-muted:#6C747D;
+    --bg-accent:#16232F; --text-accent:#79ACD6; --border-accent:#79ACD6;
+    --fill-accent:#79ACD6; --on-accent:#12151A;
+    --bg-warning:#241D0F; --text-warning:#D9A441; --border-warning:#D9A441;
+    --bg-success:#122019; --text-success:#7FBF9A; --border-success:#7FBF9A;
+    --bg-danger:#241512; --text-danger:#D98A7E;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text-primary);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6}
+.shell-wrap{max-width:880px;margin:0 auto;padding:36px 22px 72px}
+.shell-head{border-bottom:2px solid var(--text-primary);padding-bottom:14px;margin-bottom:8px}
+.shell-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.shell-head h1{font-family:var(--font-mono);font-size:24px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.shell-head p{color:var(--text-secondary);font-size:14px;margin:0}
+.shell-back{display:inline-block;margin-bottom:18px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);text-decoration:none}
+.shell-back:hover{color:var(--text-accent)}
+</style>
+</head>
+<body>
+<div class="shell-wrap">
+<a class="shell-back" href="../index.html">&larr; Interview Prep home</a>
+<div class="shell-head">
+  <div class="shell-eyebrow">System design / drill</div>
+  <h1>The 45-minute interview clock</h1>
+  <p>Seven phases sized by their real duration. Click a phase for what to produce and how it fails.</p>
+</div><style>
+.seg{border:none;border-right:0.5px solid var(--border);background:var(--surface-1);cursor:pointer;color:var(--text-primary);padding:10px 8px;text-align:left;min-width:0;transition:background .2s;font-family:inherit}
+.seg:last-child{border-right:none}
+.seg:hover{background:var(--bg-accent)}
+.seg.on{background:var(--fill-accent)}
+.seg.on .nm,.seg.on .mm{color:var(--on-accent)}
+.mm{font-size:11px;color:var(--text-muted);font-family:var(--font-mono)}
+.nm{font-size:12.5px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Interactive breakdown of a 45-minute system design interview into seven phases sized by their real duration, with detail for each phase.</h2>
+<div style="display:flex;width:100%;border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:1rem 0 0" id="clk"></div>
+<div style="display:flex;gap:14px;margin-top:12px;align-items:baseline;font-size:12px;color:var(--text-muted)">
+  <span>0 min</span><span style="flex:1;border-top:0.5px dashed var(--border)"></span><span>45 min</span>
+</div>
+<div style="background:var(--bg-accent);border-radius:var(--radius);padding:14px 16px;margin-top:14px;min-height:96px">
+  <div id="ph" style="font-size:15px;font-weight:500;color:var(--text-accent);margin-bottom:5px"></div>
+  <div id="pd" style="font-size:14px;color:var(--text-primary);line-height:1.65"></div>
+  <div id="pk" style="font-size:13px;color:var(--text-secondary);margin-top:8px;font-style:italic"></div>
+</div>
+<script>
+const P=[
+[5,'Clarify','Functional requirements in three to five bullets, plus an explicit list of non-goals. State which non-functional you are optimizing for and get agreement before you draw anything.','Failure here: designing before scoping. The most common senior-level rejection.'],
+[3,'Quantify','Scale, QPS, storage, latency SLO, consistency requirement. Say every number out loud, even rough ones.','Failure here: an interviewer who never hears a number assumes you cannot produce one.'],
+[4,'API and data model','Three to five endpoints and the core entities. Name the access pattern before you name the datastore.','Failure here: picking a database by reputation instead of by access pattern.'],
+[13,'High-level design','Draw it once, end to end: client, edge, services, storage, async path, analytics. Get data flowing before optimizing any part.','Failure here: orphan boxes with no data flowing through them.'],
+[13,'Deep dive','Let them pick, or offer: the two risky parts are X and Y, which do you want. Go two or three levels down and know the failure modes.','Offering the choice is itself a seniority signal. Most candidates wait to be told.'],
+[5,'Failure and ops','What breaks first, how you detect it, how it degrades rather than dies. Blast radius, rollback, and the metric you would page on.','Failure here: a design with no stated failure behaviour reads as untested thinking.'],
+[2,'Wrap','Recap the two or three decisions that defined the design, and name what you would revisit with more time.','Failure here: trailing off. The last thing they hear becomes the summary they write.']];
+const c=document.getElementById('clk');
+P.forEach((p,i)=>{const b=document.createElement('button');b.className='seg';b.style.flex=p[0];
+b.innerHTML='<div class="mm">'+p[0]+' min</div><div class="nm">'+p[1]+'</div>';
+b.onclick=()=>{document.querySelectorAll('.seg').forEach(s=>s.classList.remove('on'));b.classList.add('on');
+document.getElementById('ph').textContent=p[1]+' \u00b7 '+p[0]+' minutes';
+document.getElementById('pd').textContent=p[2];document.getElementById('pk').textContent=p[3];};
+c.appendChild(b);if(i===0)b.click();});
+</script>
+</div>
+</body>
+</html>

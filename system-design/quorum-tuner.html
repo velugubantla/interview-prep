@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quorum tuning — W + R &gt; N</title>
+<style>
+/* ── Shell added to make this Claude artifact fragment standalone. Original content untouched below. ── */
+:root{
+  --paper:#FBFAF6; --surface-1:#FFFFFF;
+  --border:#C3CFD8; --border-strong:#8A9099;
+  --text-primary:#16181C; --text-secondary:#5A6068; --text-muted:#8A9099;
+  --bg-accent:#E8F0F6; --text-accent:#1F4E79; --border-accent:#1F4E79;
+  --fill-accent:#1F4E79; --on-accent:#FFFFFF;
+  --bg-warning:#FBF1DC; --text-warning:#9A6A05; --border-warning:#9A6A05;
+  --bg-success:#E6F1EA; --text-success:#2C6E49; --border-success:#2C6E49;
+  --bg-danger:#F7E9E7; --text-danger:#9B3226;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --surface-1:#171B21;
+    --border:#2A333D; --border-strong:#6C747D;
+    --text-primary:#E8EAED; --text-secondary:#9BA3AC; --text-muted:#6C747D;
+    --bg-accent:#16232F; --text-accent:#79ACD6; --border-accent:#79ACD6;
+    --fill-accent:#79ACD6; --on-accent:#12151A;
+    --bg-warning:#241D0F; --text-warning:#D9A441; --border-warning:#D9A441;
+    --bg-success:#122019; --text-success:#7FBF9A; --border-success:#7FBF9A;
+    --bg-danger:#241512; --text-danger:#D98A7E;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text-primary);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6}
+.shell-wrap{max-width:880px;margin:0 auto;padding:36px 22px 72px}
+.shell-head{border-bottom:2px solid var(--text-primary);padding-bottom:14px;margin-bottom:8px}
+.shell-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.shell-head h1{font-family:var(--font-mono);font-size:24px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.shell-head p{color:var(--text-secondary);font-size:14px;margin:0}
+.shell-back{display:inline-block;margin-bottom:18px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);text-decoration:none}
+.shell-back:hover{color:var(--text-accent)}
+</style>
+</head>
+<body>
+<div class="shell-wrap">
+<a class="shell-back" href="../index.html">&larr; Interview Prep home</a>
+<div class="shell-head">
+  <div class="shell-eyebrow">System design / interactive</div>
+  <h1>Quorum tuning — W + R &gt; N</h1>
+  <p>Drag until the sets stop overlapping and watch what you lose.</p>
+</div><style>
+.sl3{display:grid;grid-template-columns:190px 1fr 46px;align-items:center;gap:12px;margin-bottom:9px}
+.sl3 label{font-size:13px;color:var(--text-secondary)}
+.sl3 .v{font-size:14px;font-family:var(--font-mono);font-weight:500;text-align:right}
+.nodes{display:flex;gap:9px;flex-wrap:wrap;margin:4px 0 14px}
+.nd{width:52px;height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+border:0.5px solid var(--border);background:var(--surface-1);transition:background .25s,border-color .25s;font-family:var(--font-mono)}
+.nd b{font-size:14px;font-weight:500}
+.nd s{font-size:9.5px;text-decoration:none;letter-spacing:.06em;margin-top:1px}
+.nd.w{background:var(--bg-accent);border-color:var(--border-accent);color:var(--text-accent)}
+.nd.r{background:var(--bg-warning);border-color:var(--border-warning);color:var(--text-warning)}
+.nd.o{background:var(--bg-success);border-color:var(--border-success);color:var(--text-success)}
+.lg{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin-bottom:16px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.st{background:var(--surface-1);border-radius:var(--radius);padding:12px 14px}
+.st .k{font-size:12px;color:var(--text-secondary)}
+.st .n{font-size:19px;font-weight:500;font-family:var(--font-mono);margin-top:2px}
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Interactive quorum tuner showing replica nodes with write and read sets, whether they overlap to guarantee a fresh read, and the resulting fault tolerance.</h2>
+<div style="margin:1rem 0 1rem">
+<div class="sl3"><label>Replicas (N)</label><input type="range" id="n1" min="3" max="9" step="1" value="5"><span class="v" id="vn"></span></div>
+<div class="sl3"><label>Write quorum (W)</label><input type="range" id="n2" min="1" max="9" step="1" value="3"><span class="v" id="vw"></span></div>
+<div class="sl3"><label>Read quorum (R)</label><input type="range" id="n3" min="1" max="9" step="1" value="3"><span class="v" id="vr"></span></div>
+</div>
+<div class="nodes" id="nds"></div>
+<div class="lg">
+<span><i style="background:var(--bg-accent);border:0.5px solid var(--border-accent)"></i>write set</span>
+<span><i style="background:var(--bg-warning);border:0.5px solid var(--border-warning)"></i>read set</span>
+<span><i style="background:var(--bg-success);border:0.5px solid var(--border-success)"></i>overlap</span>
+<span><i style="background:var(--surface-1);border:0.5px solid var(--border)"></i>idle</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
+<div class="st"><div class="k">W + R vs N</div><div class="n" id="eq"></div></div>
+<div class="st"><div class="k">Write availability</div><div class="n" id="fw"></div></div>
+<div class="st"><div class="k">Read availability</div><div class="n" id="fr"></div></div>
+<div class="st"><div class="k">Config shape</div><div class="n" id="sh" style="font-size:15px"></div></div>
+</div>
+<div id="vq" style="border-radius:var(--radius);padding:13px 16px;font-size:14px;line-height:1.6"></div>
+<script>
+const z=i=>document.getElementById(i);
+function draw(){
+const N=+n1.value;n2.max=N;n3.max=N;
+if(+n2.value>N)n2.value=N;if(+n3.value>N)n3.value=N;
+const W=+n2.value,R=+n3.value;
+vn.textContent=N;vw.textContent=W;vr.textContent=R;
+let h='';
+for(let i=0;i<N;i++){
+ const inW=i<W, inR=i>=N-R;
+ const c=inW&&inR?'o':inW?'w':inR?'r':'';
+ const lab=inW&&inR?'W R':inW?'W':inR?'R':'\u2014';
+ h+='<div class="nd '+c+'"><b>'+(i+1)+'</b><s>'+lab+'</s></div>';}
+z('nds').innerHTML=h;
+const strong=W+R>N;
+z('eq').textContent=W+' + '+R+(strong?' > ':' \u2264 ')+N;
+z('eq').style.color=strong?'var(--text-success)':'var(--text-danger)';
+z('fw').textContent=(N-W)+' node'+(N-W===1?'':'s');
+z('fr').textContent=(N-R)+' node'+(N-R===1?'':'s');
+let shape;
+if(W===N&&R===1)shape='Read optimized';
+else if(W===1&&R===N)shape='Write optimized';
+else if(strong&&W===R)shape='Balanced quorum';
+else if(strong)shape='Skewed quorum';
+else shape='Eventual only';
+z('sh').textContent=shape;
+const b=z('vq');
+let t;
+if(!strong){b.style.background='var(--bg-danger)';b.style.color='var(--text-danger)';
+t='The sets do not overlap. A read can hit only nodes that never saw the latest write, so you are in eventual consistency territory \u2014 stale reads are possible and you need read repair and anti-entropy to converge. This is a legitimate choice for feeds and counters. It is not a legitimate choice for balances or inventory.';}
+else if(W===N){b.style.background='var(--bg-warning)';b.style.color='var(--text-warning)';
+t='Overlap guaranteed, but W equals N means a single node failure blocks all writes. Reads are as fast and available as possible. This is the read-optimized extreme \u2014 defensible for config data that is written rarely and read constantly.';}
+else if(R===N){b.style.background='var(--bg-warning)';b.style.color='var(--text-warning)';
+t='Overlap guaranteed, but R equals N means a single node failure blocks all reads. Writes are cheap and highly available. Rarely the right call \u2014 most systems read far more than they write.';}
+else{b.style.background='var(--bg-success)';b.style.color='var(--text-success)';
+t='Every read set intersects every write set, so at least one node returns the latest version and versioning resolves the rest. You tolerate '+(N-W)+' failures on writes and '+(N-R)+' on reads while keeping fresh reads. This is the configuration to default to, and the reasoning to say out loud rather than just quoting the inequality.';}
+b.textContent=t;}
+[n1,n2,n3].forEach(x=>x.oninput=draw);draw();
+</script>
+</div>
+</body>
+</html>

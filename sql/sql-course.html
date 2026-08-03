@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL — the full map, with working parts</title>
+<style>
+  :root{
+    --paper:#FBFAF6; --panel:#FFFFFF; --card:#FFFFFF;
+    --ink:#16181C; --muted:#5A6068; --rule:#C3CFD8; --rule2:#D8E4EC;
+    --keep:#2C6E49; --keepbg:#E6F1EA;
+    --drop:#9B3226; --dropbg:#F7E9E7;
+    --mark:#9A6A05; --markbg:#FBF1DC;
+    --hl:#E8F0F6; --numlit:#1F4E79; --trapline:#E5C4BC;
+    --navbg:rgba(251,250,246,.94);
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#12151A; --panel:#171B21; --card:#1C232B;
+      --ink:#E8EAED; --muted:#9BA3AC; --rule:#2A333D; --rule2:#1E252D;
+      --keep:#7FBF9A; --keepbg:#122019;
+      --drop:#D98A7E; --dropbg:#241512;
+      --mark:#D9A441; --markbg:#241D0F;
+      --hl:#16232F; --numlit:#79ACD6; --trapline:#57302A;
+      --navbg:rgba(18,21,26,.94);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:88px}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---- masthead ---- */
+  .mast{padding:56px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;gap:12px;align-items:center;margin:0 0 18px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.8rem,4.4vw,2.8rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.015em}
+  .standfirst{max-width:62ch;color:var(--muted);font-size:1.02rem;margin:0 0 6px}
+  .standfirst strong{color:var(--ink);font-weight:600}
+
+  /* ---- sticky nav ---- */
+  .nav{position:sticky;top:0;z-index:50;background:var(--navbg);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);margin-top:36px}
+  .nav-in{max-width:1080px;margin:0 auto;padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .nav button{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;background:transparent;color:var(--muted);border:1px solid var(--rule);padding:4px 8px;border-radius:2px;transition:.15s;cursor:pointer}
+  .nav button:hover{color:var(--ink);border-color:var(--ink)}
+  .score{margin-left:auto;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .score b{color:var(--keep)}
+
+  /* ---- execution engine ---- */
+  .engine{margin:40px 0 60px;border:1px solid var(--rule);background:var(--panel);border-radius:2px;overflow:hidden}
+  .engine-head{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}
+  .engine-head h2{font-family:var(--mono);font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;margin:0;font-weight:700}
+  .engine-head p{margin:0;font-size:.84rem;color:var(--muted);max-width:52ch}
+  .stages{display:flex;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  .stage{font-family:var(--mono);font-size:.72rem;border:1px solid var(--rule);background:transparent;color:var(--muted);padding:6px 10px;margin:3px 6px 3px 0;cursor:pointer;border-radius:2px;transition:.18s}
+  .stage:hover{border-color:var(--ink);color:var(--ink)}
+  .stage[aria-current="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .stage .n{opacity:.55;margin-right:6px}
+  .engine-body{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+  .pane{padding:20px}
+  .pane+.pane{border-left:1px solid var(--rule)}
+  .pane-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .rowcount{float:right;text-transform:uppercase}
+  .sqlblock{font-family:var(--mono);font-size:.86rem;line-height:1.9;margin:0}
+  .sqlblock .line{padding:1px 8px;border-left:2px solid transparent;transition:.2s;opacity:.42}
+  .sqlblock .line.active{background:var(--hl);border-left-color:var(--mark);opacity:1}
+  .sqlblock .line.done{opacity:.72}
+  .note{margin:20px 0 0;font-size:.86rem;color:var(--muted);min-height:6.2em}
+  .note b{color:var(--ink)}
+  .grid{display:flex;flex-direction:column;gap:3px;min-height:330px}
+  .r{display:grid;grid-template-columns:2.2rem 1fr 4.6rem 5rem;gap:8px;align-items:center;font-family:var(--mono);font-size:.78rem;padding:4px 8px;background:var(--card);border:1px solid var(--rule);border-radius:2px;transition:opacity .35s,transform .35s,background .3s,border-color .3s}
+  .r .id{color:var(--muted);font-size:.7rem}
+  .r .amt{text-align:right}
+  .r .st{color:var(--muted);font-size:.72rem}
+  .r.dropping{background:var(--dropbg);border-color:var(--drop);color:var(--drop);text-decoration:line-through;opacity:.8}
+  .r.entering{opacity:0;transform:translateY(-6px)}
+  .r.agg{background:var(--keepbg);border-color:var(--keep)}
+  .r.agg .amt{color:var(--keep);font-weight:600}
+  .controls{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--rule);flex-wrap:wrap}
+
+  /* ---- shared control buttons ---- */
+  .ctl{font-family:var(--mono);font-size:.73rem;letter-spacing:.05em;background:var(--ink);color:var(--panel);border:1px solid var(--ink);padding:7px 14px;cursor:pointer;border-radius:2px;transition:.18s}
+  .ctl.ghost{background:transparent;color:var(--ink)}
+  .ctl:hover{opacity:.82}
+  .ctl:disabled{opacity:.32;cursor:default}
+  .ctl.on{background:var(--ink);color:var(--panel)}
+  .ctl.off{background:transparent;color:var(--muted);border-color:var(--rule)}
+  .ctl.off:hover{color:var(--ink);border-color:var(--ink)}
+  :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+
+  /* ---- tier sections ---- */
+  .tier{border-top:1px solid var(--rule)}
+  .tier-btn{width:100%;display:grid;grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1.1fr) 1.4rem;gap:16px;align-items:baseline;text-align:left;background:none;border:none;cursor:pointer;padding:22px 4px;font-family:inherit;color:inherit}
+  .tier-btn:hover .tier-name{text-decoration:underline;text-underline-offset:3px}
+  .tier-num{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .tier-name{font-family:var(--mono);font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+  .tier-sub{font-size:.86rem;color:var(--muted)}
+  .chev{font-family:var(--mono);color:var(--muted);transition:transform .2s;justify-self:end}
+  .tier[data-open="true"] .chev{transform:rotate(90deg)}
+  .tier-body{display:none;padding:0 0 40px}
+  .tier[data-open="true"] .tier-body{display:block}
+  .tier-intro{max-width:66ch;font-size:.95rem;color:var(--muted);margin:0 0 28px;padding-left:calc(3.4rem + 16px)}
+  .tier-intro b{color:var(--ink)}
+
+  /* ---- concept cards ---- */
+  .concept{display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:16px;margin-bottom:26px}
+  .c-mark{font-family:var(--mono);font-size:.68rem;color:var(--muted);padding-top:.35em;letter-spacing:.06em}
+  .c-body{min-width:0}
+  .c-title{font-family:var(--mono);font-size:.92rem;font-weight:700;margin:0 0 6px}
+  .c-text{margin:0 0 12px;font-size:.93rem;max-width:64ch}
+  .c-text code{font-family:var(--mono);font-size:.85em;background:var(--hl);padding:1px 4px;border-radius:2px}
+  pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:var(--card);border:1px solid var(--rule);border-left:2px solid var(--ink);padding:12px 14px;overflow-x:auto;margin:0 0 12px;border-radius:2px}
+  .trap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:.87rem;background:var(--dropbg);border:1px solid var(--trapline);border-radius:2px;padding:10px 12px;margin:0 0 12px;max-width:66ch}
+  .trap .lbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--drop);padding-top:.3em}
+  .trap p{margin:0}
+  .kw{color:var(--drop);font-weight:600}
+  .fn{color:var(--keep);font-weight:600}
+  .str{color:var(--mark)}
+  .num{color:var(--numlit)}
+  .cm{color:var(--muted);font-style:italic}
+
+  /* ---- demo shell ---- */
+  .demo{border:1px solid var(--rule);background:var(--panel);border-radius:2px;margin:0 0 16px;overflow:hidden}
+  .demo-head{padding:12px 16px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .demo-head h4{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin:0}
+  .demo-head p{margin:0;font-size:.8rem;color:var(--muted);flex:1;min-width:14ch}
+  .demo-bar{padding:12px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--rule2)}
+  .demo-bar .lab{font-family:var(--mono);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:4px}
+  .demo-main{padding:16px;display:grid;gap:16px}
+  .demo-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .demo-out{font-size:.86rem;color:var(--muted);padding:12px 16px;border-top:1px solid var(--rule2);min-height:3.2em}
+  .demo-out b{color:var(--ink)}
+  .demo-out .verdict{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-right:8px}
+  .v-ok{background:var(--keepbg);color:var(--keep)}
+  .v-bad{background:var(--dropbg);color:var(--drop)}
+  .v-warn{background:var(--markbg);color:var(--mark)}
+
+  /* ---- mini tables ---- */
+  table.t{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;background:var(--card)}
+  table.t th{text-align:left;font-weight:600;color:var(--muted);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--rule)}
+  table.t td{padding:5px 8px;border-bottom:1px solid var(--rule2);transition:background .3s,color .3s,opacity .3s}
+  table.t tr:last-child td{border-bottom:none}
+  table.t tr.keep td{background:var(--keepbg)}
+  table.t tr.drop td{background:var(--dropbg);color:var(--drop);opacity:.75}
+  table.t tr.dim td{opacity:.34}
+  table.t tr.hot td{background:var(--markbg)}
+  table.t tr.win td{background:var(--keepbg);box-shadow:inset 2px 0 0 var(--keep)}
+  table.t tr.cur td{background:var(--markbg);box-shadow:inset 2px 0 0 var(--mark);font-weight:600}
+  table.t tr.enter td{opacity:0}
+  table.t td.num{text-align:right}
+  .tcap{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .tbox{border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+
+  /* ---- grid canvas (index demo) ---- */
+  .cells{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--rule2);border-radius:1px;transition:background .12s,border-color .12s}
+  .cell.read{background:var(--markbg);border-color:var(--mark)}
+  .cell.hit{background:var(--keep);border-color:var(--keep)}
+
+  /* ---- tree (recursive demo) ---- */
+  .tree{display:flex;flex-direction:column;gap:10px}
+  .lvl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .lvl .lname{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);width:5.4rem;flex-shrink:0}
+  .node{font-family:var(--mono);font-size:.74rem;border:1px solid var(--rule);background:var(--card);color:var(--muted);padding:4px 9px;border-radius:2px;transition:.3s;opacity:.45}
+  .node.on{opacity:1;background:var(--keepbg);border-color:var(--keep);color:var(--keep);font-weight:600}
+  .node.new{background:var(--markbg);border-color:var(--mark);color:var(--mark);opacity:1;font-weight:600}
+
+  /* ---- sessions (txn demo) ---- */
+  .sessions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sess{border:1px solid var(--rule);border-radius:2px;background:var(--card);overflow:hidden}
+  .sess h5{margin:0;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--rule2);color:var(--muted)}
+  .sess ol{margin:0;padding:8px 10px 10px 26px;font-family:var(--mono);font-size:.75rem;line-height:1.8}
+  .sess li{color:var(--muted);opacity:.4;transition:.25s;padding-left:2px}
+  .sess li.on{opacity:1;color:var(--ink)}
+  .sess li.now{opacity:1;color:var(--ink);background:var(--markbg)}
+  .balance{font-family:var(--mono);font-size:.8rem;text-align:center;padding:10px;border:1px solid var(--rule);background:var(--card);border-radius:2px}
+  .balance b{font-size:1.4rem;display:block;margin-top:2px}
+
+  /* ---- quiz ---- */
+  .quiz{margin-top:34px;padding-left:calc(3.4rem + 16px)}
+  .quiz-h{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;display:flex;gap:10px;align-items:center}
+  .quiz-h::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .q{border:1px solid var(--rule);background:var(--card);border-radius:2px;padding:16px;margin-bottom:12px}
+  .q-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;color:var(--muted)}
+  .q-text{margin:6px 0 12px;font-size:.93rem;max-width:66ch}
+  .q pre.code{background:var(--panel)}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.88rem;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:9px 12px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:flex-start}
+  .opt:hover{border-color:var(--ink)}
+  .opt .tick{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex-shrink:0;padding-top:.1em}
+  .opt.right{background:var(--keepbg);border-color:var(--keep)}
+  .opt.right .tick{color:var(--keep)}
+  .opt.wrong{background:var(--dropbg);border-color:var(--drop)}
+  .opt.wrong .tick{color:var(--drop)}
+  .opt.locked{cursor:default}
+  .why{margin:12px 0 0;font-size:.87rem;color:var(--muted);border-left:2px solid var(--mark);padding-left:12px;display:none}
+  .why.show{display:block}
+  .why b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--rule);margin-top:20px;padding:32px 0 90px;font-size:.86rem;color:var(--muted);max-width:66ch}
+  footer b{color:var(--ink)}
+
+  @media (max-width:860px){
+    .engine-body,.demo-2col,.sessions{grid-template-columns:1fr}
+    .pane+.pane{border-left:none;border-top:1px solid var(--rule)}
+    .tier-btn{grid-template-columns:2.6rem minmax(0,1fr) 1.2rem}
+    .tier-sub{display:none}
+    .tier-intro,.quiz{padding-left:0}
+    .concept{grid-template-columns:1fr;gap:4px}
+    .cells{grid-template-columns:repeat(8,1fr)}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<div class="wrap mast">
+  <p style="margin:0 0 14px"><a href="../index.html" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--muted);text-decoration:none;border:1px solid var(--rule);padding:5px 10px;border-radius:2px;display:inline-block">&larr; Interview Prep home</a></p>
+  <p class="eyebrow">SQL · tiers 00–09 · 12 demos · 40 problems</p>
+  <h1>SQL, in the order things<br>actually depend on each other.</h1>
+  <p class="standfirst">Every tier below has three parts: the concepts, a <strong>working demo</strong> you can drive, and problems that fail you honestly. The through-line is that almost every costly SQL mistake produces a <strong>plausible wrong number</strong>, not an error message — so each tier names its own silent failure.</p>
+</div>
+
+<nav class="nav"><div class="nav-in" id="nav"></div></nav>
+
+<div class="wrap">
+  <section class="engine" aria-label="Logical execution order">
+    <div class="engine-head">
+      <h2>Start here: the clause you write first runs fifth</h2>
+      <p>One query, seven stages. This model explains alias visibility, WHERE vs HAVING, and why LIMIT never makes an aggregate cheap.</p>
+    </div>
+    <div class="stages" id="stages"></div>
+    <div class="engine-body">
+      <div class="pane">
+        <p class="pane-label">Query</p>
+        <pre class="sqlblock" id="sql"></pre>
+        <p class="note" id="note"></p>
+      </div>
+      <div class="pane">
+        <p class="pane-label">Row set <span class="rowcount pane-label" id="rowcount" style="display:inline"></span></p>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctl" id="run">Run all steps</button>
+      <button class="ctl ghost" id="prev">Back</button>
+      <button class="ctl ghost" id="next">Next step</button>
+      <button class="ctl ghost" id="reset">Reset</button>
+    </div>
+  </section>
+
+  <div id="tiers"></div>
+
+  <footer>
+    <b>Three real boundaries, not ten.</b> Beginner → intermediate is joining and aggregating without changing the grain. Intermediate → advanced is window functions plus reading an execution plan. Advanced → expert is correctness under concurrency and cost at scale. Everything else is dialect trivia you look up.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const KW = new Set(('select from where group by having order limit offset join left right full inner outer cross on as and or not in is null distinct union all intersect except with recursive case when then else end over partition rows range groups between preceding following unbounded current row insert into values update set delete create table view materialized index merge using matched conflict do nothing returning begin commit rollback lateral exists asc desc fetch next only qualify filter grouping sets rollup cube explain analyze primary key foreign references unique check constraint default cast interval date timestamp timestamptz if for of level isolation read committed repeatable serializable unnest apply top nulls first last ilike like window add column temporary drop alter serial int text boolean numeric true false unknown').split(' '));
+const FNS = new Set(('sum count avg min max coalesce nullif row_number rank dense_rank ntile lag lead first_value last_value date_trunc extract array_agg string_agg listagg generate_series abs round concat greatest least now current_date current_timestamp length upper lower trim').split(' '));
+
+function hl(sql){
+  const re = /(--[^\n]*)|('(?:''|[^'])*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([\s\S])/g;
+  let out = '', m;
+  while ((m = re.exec(sql)) !== null){
+    if (m[1]) out += '<span class="cm">'+esc(m[1])+'</span>';
+    else if (m[2]) out += '<span class="str">'+esc(m[2])+'</span>';
+    else if (m[3]) out += '<span class="num">'+m[3]+'</span>';
+    else if (m[4]){
+      const w = m[4], lw = w.toLowerCase();
+      if (KW.has(lw)) out += '<span class="kw">'+esc(w)+'</span>';
+      else if (FNS.has(lw)) out += '<span class="fn">'+esc(w)+'</span>';
+      else out += esc(w);
+    }
+    else out += esc(m[5]);
+  }
+  return out;
+}
+const code = sql => '<pre class="code">'+hl(sql)+'</pre>';
+
+/* mini table renderer. rows = [{cells:[...], cls:'keep|drop|dim|hot|win|cur'}] */
+function tbl(cols, rows, caption){
+  let h = '';
+  if (caption) h += '<p class="tcap">'+esc(caption)+'</p>';
+  h += '<div class="tbox"><table class="t"><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+'</th>');
+  h += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    h += '<tr class="'+(r.cls||'')+'">';
+    r.cells.forEach((c,i) => {
+      const isNum = typeof c === 'number';
+      h += '<td class="'+(isNum?'num':'')+'">'+(c===null?'<span class="cm">NULL</span>':esc(c))+'</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+function btnRow(label, items, onPick, startIdx){
+  const wrap = document.createElement('div');
+  wrap.className = 'demo-bar';
+  if (label) wrap.innerHTML = '<span class="lab">'+esc(label)+'</span>';
+  const btns = items.map((it,i) => {
+    const b = document.createElement('button');
+    b.className = 'ctl ' + (i===startIdx ? 'on':'off');
+    b.textContent = it;
+    b.onclick = () => { btns.forEach((x,j)=> x.className='ctl '+(j===i?'on':'off')); onPick(i); };
+    wrap.appendChild(b);
+    return b;
+  });
+  return wrap;
+}
+
+/* ============================================================
+   EXECUTION ORDER ENGINE (top of page)
+   ============================================================ */
+const ROWS = [
+  {id:'r1',region:'West',amount:120,status:'paid'},   {id:'r2',region:'West',amount:40,status:'refunded'},
+  {id:'r3',region:'East',amount:300,status:'paid'},   {id:'r4',region:'East',amount:80,status:'paid'},
+  {id:'r5',region:'North',amount:25,status:'paid'},   {id:'r6',region:'West',amount:210,status:'paid'},
+  {id:'r7',region:'South',amount:90,status:'refunded'},{id:'r8',region:'East',amount:150,status:'paid'},
+  {id:'r9',region:'North',amount:60,status:'paid'},   {id:'r10',region:'South',amount:400,status:'paid'},
+  {id:'r11',region:'West',amount:15,status:'paid'},   {id:'r12',region:'South',amount:130,status:'paid'}
+];
+const SQL_LINES = [
+  {t:"SELECT region, SUM(amount) AS revenue", step:4},
+  {t:"FROM orders", step:0},
+  {t:"WHERE status = 'paid'", step:1},
+  {t:"GROUP BY region", step:2},
+  {t:"HAVING SUM(amount) > 200", step:3},
+  {t:"ORDER BY revenue DESC", step:5},
+  {t:"LIMIT 2;", step:6}
+];
+const STAGES = [
+  {label:'FROM', note:'<b>1 · FROM / JOIN.</b> The engine assembles the working set first. If a join here multiplies rows — one order matching three shipments — every SUM downstream is inflated and nothing errors.'},
+  {label:'WHERE', note:'<b>2 · WHERE.</b> Filters individual rows, before grouping exists. That is why <code>WHERE revenue &gt; 200</code> fails: the alias has not been created yet, and neither has the group.'},
+  {label:'GROUP BY', note:'<b>3 · GROUP BY.</b> The grain changes here. Twelve rows become four. From now on one output row represents many input rows, and any column not grouped or aggregated is undefined.'},
+  {label:'HAVING', note:'<b>4 · HAVING.</b> Filters groups, not rows. If a predicate can run before grouping, put it in WHERE — filtering 12 rows to 10 is cheaper than aggregating 12 and discarding groups.'},
+  {label:'SELECT', note:'<b>5 · SELECT.</b> Projection and aliasing happen fifth, despite being written first. This is the moment <code>revenue</code> starts to exist — so ORDER BY may use it and WHERE may not.'},
+  {label:'ORDER BY', note:'<b>6 · ORDER BY.</b> Rows have no inherent order until you impose one. A result that looks sorted without ORDER BY is an accident of the plan and will change.'},
+  {label:'LIMIT', note:'<b>7 · LIMIT.</b> Truncation is last. LIMIT 2 on a sorted aggregate still reads, groups and sorts everything first — it caps what is returned, not what is computed.'}
+];
+const G_ORDER = ['West','East','North','South'];
+const agg = rows => { const m=new Map(); rows.forEach(r=>m.set(r.region,(m.get(r.region)||0)+r.amount));
+  return G_ORDER.filter(g=>m.has(g)).map(g=>({id:'g_'+g,region:g,amount:m.get(g),agg:true})); };
+const paid=ROWS.filter(r=>r.status==='paid'), groups=agg(paid),
+      kept=groups.filter(g=>g.amount>200), sorted=[...kept].sort((a,b)=>b.amount-a.amount), limited=sorted.slice(0,2);
+const STATES=[
+  {rows:ROWS,mark:[],cols:3,grouped:false},{rows:paid,mark:['r2','r7'],cols:3,grouped:false},
+  {rows:groups,mark:[],cols:2,grouped:true},{rows:kept,mark:['g_North'],cols:2,grouped:true},
+  {rows:kept,mark:[],cols:2,grouped:true},{rows:sorted,mark:[],cols:2,grouped:true},
+  {rows:limited,mark:['g_West'],cols:2,grouped:true}
+];
+
+const gridEl=document.getElementById('grid'), sqlEl=document.getElementById('sql'),
+      noteEl=document.getElementById('note'), stagesEl=document.getElementById('stages'),
+      countEl=document.getElementById('rowcount');
+let step=0, timer=null;
+
+STAGES.forEach((s,i)=>{ const b=document.createElement('button');
+  b.className='stage'; b.type='button'; b.innerHTML='<span class="n">'+(i+1)+'</span>'+s.label;
+  b.onclick=()=>{stopE();goto(i);}; stagesEl.appendChild(b); });
+
+function rowEl(r,dropping,cols){
+  const d=document.createElement('div');
+  d.className='r'+(r.agg?' agg':'')+(dropping?' dropping':''); d.dataset.id=r.id;
+  d.innerHTML='<span class="id">'+(r.agg?'·':r.id)+'</span><span>'+r.region+'</span><span class="amt">'+
+    (r.agg?r.amount.toLocaleString():r.amount)+'</span><span class="st">'+(cols===3?r.status:(r.agg?'sum':''))+'</span>';
+  return d;
+}
+function mergeMarked(s){
+  const prev=STATES[step-1]?STATES[step-1].rows:[]; const ids=new Set(s.rows.map(r=>r.id));
+  const out=[]; prev.forEach(r=>{ if(ids.has(r.id)||s.mark.includes(r.id)) out.push(r); });
+  return out.length?out:s.rows;
+}
+function render(showMarked){
+  const s=STATES[step], before=new Map();
+  gridEl.querySelectorAll('.r').forEach(el=>before.set(el.dataset.id,el.getBoundingClientRect().top));
+  const list = (showMarked && s.mark.length && step>0) ? mergeMarked(s) : s.rows;
+  gridEl.innerHTML='';
+  list.forEach(r=>gridEl.appendChild(rowEl(r, showMarked && s.mark.includes(r.id), s.cols)));
+  gridEl.querySelectorAll('.r').forEach(el=>{
+    const p=before.get(el.dataset.id);
+    if(p!==undefined){ const dy=p-el.getBoundingClientRect().top;
+      if(Math.abs(dy)>1){ el.style.transition='none'; el.style.transform='translateY('+dy+'px)';
+        requestAnimationFrame(()=>{el.style.transition='';el.style.transform='';}); } }
+    else { el.classList.add('entering'); requestAnimationFrame(()=>el.classList.remove('entering')); }
+  });
+  countEl.textContent=list.length+(s.grouped?' groups':' rows');
+  sqlEl.innerHTML=SQL_LINES.map(l=>'<div class="line '+(l.step===step?'active':(l.step<step?'done':''))+'">'+hl(l.t)+'</div>').join('');
+  noteEl.innerHTML=STAGES[step].note;
+  [...stagesEl.children].forEach((b,i)=>b.setAttribute('aria-current',i===step?'true':'false'));
+  document.getElementById('prev').disabled=step===0;
+  document.getElementById('next').disabled=step===STATES.length-1;
+}
+function goto(i){
+  step=Math.max(0,Math.min(STATES.length-1,i));
+  if(STATES[step].mark.length && step>0){ render(true); setTimeout(()=>{ if(step===i) render(false); },780); }
+  else render(false);
+}
+function stopE(){ clearInterval(timer); timer=null; document.getElementById('run').textContent='Run all steps'; }
+document.getElementById('next').onclick=()=>{stopE();goto(step+1);};
+document.getElementById('prev').onclick=()=>{stopE();goto(step-1);};
+document.getElementById('reset').onclick=()=>{stopE();goto(0);};
+document.getElementById('run').onclick=function(){
+  if(timer){stopE();return;}
+  if(step===STATES.length-1) goto(0);
+  this.textContent='Pause';
+  timer=setInterval(()=>{ if(step>=STATES.length-1){stopE();return;} goto(step+1); },2100);
+};
+goto(0);
+/* ============================================================
+   DEMO FRAMEWORK
+   ============================================================ */
+function demoShell(host, title, blurb){
+  host.className = 'demo';
+  host.innerHTML = '<div class="demo-head"><h4>'+esc(title)+'</h4><p>'+blurb+'</p></div>'
+    + '<div class="bars"></div><div class="demo-main"></div><div class="demo-out"></div>';
+  return {bars:host.querySelector('.bars'), main:host.querySelector('.demo-main'), out:host.querySelector('.demo-out')};
+}
+const V = (k,t) => '<span class="verdict v-'+k+'">'+t+'</span>';
+const DEMOS = {};
+
+/* ---------- 1. NULL / three-valued logic ---------- */
+DEMOS.null_logic = {
+  title:'Three-valued logic', blurb:'WHERE keeps only TRUE. Not TRUE-or-NULL. Only TRUE.',
+  build(host){
+    const s = demoShell(host,this.title,this.blurb);
+    const rows = [[1,'ana@x.com'],[2,null],[3,'bo@x.com'],[4,null],[5,'cy@x.com']];
+    const preds = [
+      {sql:"email = NULL",                          f:e=>'UNKNOWN'},
+      {sql:"email IS NULL",                         f:e=>e===null?'TRUE':'FALSE'},
+      {sql:"email <> 'ana@x.com'",                  f:e=>e===null?'UNKNOWN':(e!=='ana@x.com'?'TRUE':'FALSE')},
+      {sql:"email IS DISTINCT FROM 'ana@x.com'",    f:e=>e!=='ana@x.com'?'TRUE':'FALSE'}
+    ];
+    let cur = 0;
+    const draw = () => {
+      const p = preds[cur];
+      const body = rows.map(([id,e]) => {
+        const v = p.f(e);
+        return {cells:[id, e, v], cls: v==='TRUE' ? 'keep' : 'drop'};
+      });
+      const kept = body.filter(b=>b.cls==='keep').length;
+      s.main.innerHTML = code('SELECT * FROM users\nWHERE '+p.sql+';')
+        + tbl(['id','email','predicate evaluates to'], body);
+      s.out.innerHTML = (kept===0 ? V('bad','0 rows') : V('ok', kept+' of 5 rows'))
+        + (cur===0 ? 'Nothing equals NULL — not even NULL. The comparison is UNKNOWN for every row, so every row is discarded. No error, no warning, empty result.'
+          : cur===2 ? 'The two NULL rows are gone. They were not proven different from <b>ana@x.com</b> — they were unknown — and WHERE discards anything that is not TRUE.'
+          : cur===3 ? '<b>IS DISTINCT FROM</b> is NULL-aware inequality: it treats NULL as a value that differs from any non-NULL. This is the fix for the row above.'
+          : 'The only operator that can inspect NULL is IS NULL / IS NOT NULL.');
+    };
+    s.bars.appendChild(btnRow('Predicate', preds.map(p=>p.sql), i=>{cur=i;draw();}, 0));
+    draw();
+  }
+};
+
+/* ---------- 2. BETWEEN on timestamps ---------- */
+DEMOS.between_trap = {
+  title:'The half-open interval', blurb:'BETWEEN is inclusive on both ends — which is exactly the problem with timestamps.',
+  build(host){
+    const s = demoShell(host,this.title,this.blurb);
+    const rows=[[1,'2024-01-01 09:00',120],[2,'2024-01-15 11:30',300],[3,'2024-01-31 00:00',80],
+                [4,'2024-01-31 14:20',450],[5,'2024-02-01 08:05',90]];
+    const preds=[
+      {sql:"created_at BETWEEN '2024-01-01' AND '2024-01-31'", f:t=>t<='2024-01-31 00:00'},
+      {sql:"created_at >= '2024-01-01' AND created_at < '2024-02-01'", f:t=>t<'2024-02-01 00:00'}
+    ];
+    let cur=0;
+    const draw=()=>{
+      const p=preds[cur];
+      const body=rows.map(([id,t,a])=>({cells:[id,t,a], cls:p.f(t)?'keep':'drop'}));
+      const kept=body.filter(b=>b.cls==='keep');
+      const sum=kept.reduce((n,b)=>n+b.cells[2],0);
+      s.main.innerHTML=code('SELECT SUM(amount) FROM orders\nWHERE '+p.sql+';')+tbl(['id','created_at','amount'],body);
+      s.out.innerHTML=(cur===0?V('bad','SUM = '+sum):V('ok','SUM = '+sum))
+        +(cur===0?'Row 4 is a January order and it is missing. <b>2024-01-31</b> parses as midnight, so anything later that day falls outside. January revenue is understated by 450 and the query still succeeds.'
+                 :'Half-open ranges — greater-or-equal on the start, strictly-less on the next boundary — are correct for every grain: seconds, days, months. Make it a reflex.');
+    };
+    s.bars.appendChild(btnRow('Range style',['BETWEEN (closed)','>= … < (half-open)'],i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 3. COUNT / AVG with NULLs ---------- */
+DEMOS.count_avg = {
+  title:'What the denominator really is', blurb:'Aggregates skip NULL. That changes counts and averages, silently.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const rows=[[1,5],[2,null],[3,3],[4,4],[5,null],[6,5]];
+    const metrics=[
+      {name:'COUNT(*)', in:()=>true, val:'6', form:'Counts rows. NULL is irrelevant — it never looks at a column.'},
+      {name:'COUNT(rating)', in:r=>r!==null, val:'4', form:'Counts non-NULL values only. Two rows vanish from the count.'},
+      {name:'COUNT(DISTINCT rating)', in:r=>r!==null, val:'3', form:'Distinct non-NULL values: 5, 3, 4. The duplicate 5 collapses.'},
+      {name:'SUM(rating)', in:r=>r!==null, val:'17', form:'5 + 3 + 4 + 5. NULLs contribute nothing — not even zero.'},
+      {name:'AVG(rating)', in:r=>r!==null, val:'4.25', form:'17 / <b>4</b>, not 17 / 6. AVG divides by COUNT(rating). If you meant "unrated counts as zero", you wanted <code>AVG(COALESCE(rating,0))</code> = 2.83 — a very different number.'}
+    ];
+    let cur=0;
+    const draw=()=>{
+      const m=metrics[cur];
+      const body=rows.map(([id,r])=>({cells:[id,r], cls:m.in(r)?'keep':'dim'}));
+      const n=body.filter(b=>b.cls==='keep').length;
+      s.main.innerHTML=code('SELECT '+m.name+' FROM reviews;')+tbl(['id','rating'],body);
+      s.out.innerHTML=V('ok',m.name+' = '+m.val)+m.form+' Rows contributing: <b>'+n+' of 6</b>.';
+    };
+    s.bars.appendChild(btnRow('Aggregate',metrics.map(m=>m.name),i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 4. Join types ---------- */
+DEMOS.join_types = {
+  title:'Join type explorer', blurb:'Same two tables, six treatments. Watch the row count and the NULLs.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const L=[[1,'ann'],[2,'ben'],[3,'cara'],[4,'dev']];
+    const R=[[3,'x'],[4,'y'],[5,'z']];
+    const kinds=['INNER','LEFT','RIGHT','FULL','CROSS','LEFT + WHERE'];
+    const sqlFor=k=>({
+      'INNER':'SELECT * FROM l JOIN r ON l.id = r.rid;',
+      'LEFT':'SELECT * FROM l LEFT JOIN r ON l.id = r.rid;',
+      'RIGHT':'SELECT * FROM l RIGHT JOIN r ON l.id = r.rid;',
+      'FULL':'SELECT * FROM l FULL JOIN r ON l.id = r.rid;',
+      'CROSS':'SELECT * FROM l CROSS JOIN r;',
+      'LEFT + WHERE':"SELECT * FROM l LEFT JOIN r ON l.id = r.rid\nWHERE r.tag = 'y';"
+    })[k];
+    const build=k=>{
+      let out=[];
+      if(k==='CROSS'){ L.forEach(l=>R.forEach(r=>out.push([l[0],l[1],r[0],r[1]]))); return out; }
+      L.forEach(l=>{ const m=R.filter(r=>r[0]===l[0]);
+        if(m.length) m.forEach(r=>out.push([l[0],l[1],r[0],r[1]]));
+        else if(k==='LEFT'||k==='FULL'||k==='LEFT + WHERE') out.push([l[0],l[1],null,null]); });
+      if(k==='RIGHT'||k==='FULL') R.filter(r=>!L.some(l=>l[0]===r[0])).forEach(r=>out.push([null,null,r[0],r[1]]));
+      if(k==='RIGHT') out=out.filter(o=>o[2]!==null);
+      if(k==='LEFT + WHERE') out=out.filter(o=>o[3]==='y');
+      return out;
+    };
+    let cur=0;
+    const draw=()=>{
+      const k=kinds[cur], res=build(k);
+      s.main.className='demo-main demo-2col';
+      s.main.innerHTML='<div>'+tbl(['id','name'],L.map(r=>({cells:r})),'table l')
+        +'<div style="height:10px"></div>'+tbl(['rid','tag'],R.map(r=>({cells:r})),'table r')+'</div>'
+        +'<div>'+code(sqlFor(k))+tbl(['l.id','l.name','r.rid','r.tag'],
+            res.map(r=>({cells:r, cls:(k==='LEFT + WHERE'?'hot':(r[2]===null||r[0]===null?'drop':'keep'))})),
+            'result · '+res.length+' rows')+'</div>';
+      s.out.innerHTML = k==='LEFT + WHERE'
+        ? V('bad','1 row')+'The filter references the right table, so every NULL-extended row evaluates to UNKNOWN and is discarded. Your LEFT JOIN is now an INNER JOIN. Move the condition into <code>ON</code>, or test <code>(r.tag = \'y\' OR r.rid IS NULL)</code>.'
+        : k==='CROSS' ? V('warn','12 rows')+'Every left row paired with every right row: 4 × 3. A missing or mistyped join condition produces exactly this, just larger.'
+        : V('ok',res.length+' rows')+({
+            'INNER':'Only matched pairs survive. Rows 1 and 2 on the left and row 5 on the right simply disappear — which is fine if you meant it and a bug if you did not.',
+            'LEFT':'All left rows kept; unmatched ones get NULL-extended. This is the shape you want when the left table defines the grain.',
+            'RIGHT':'Mirror image of LEFT. Most teams standardise on LEFT and reorder the tables instead, because mixed directions are hard to read.',
+            'FULL':'Both sides preserved. Useful for reconciliation: rows with NULL on either side are exactly the mismatches.'
+          })[k];
+    };
+    s.bars.appendChild(btnRow('Join',kinds,i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 5. Fan-out ---------- */
+DEMOS.fanout = {
+  title:'Fan-out: how SUM doubles', blurb:'The most expensive bug in analytics SQL, and it never throws.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const orders=[['o1',200],['o2',150],['o3',250]];
+    const ships=[['s1','o1'],['s2','o1'],['s3','o2'],['s4','o3'],['s5','o3'],['s6','o3']];
+    const modes=['orders only','JOIN shipments','pre-aggregate, then join'];
+    let cur=0;
+    const draw=()=>{
+      let sql,cols,body,sum,note,badge;
+      if(cur===0){
+        sql='SELECT SUM(amount) FROM orders;';
+        cols=['order_id','amount']; body=orders.map(o=>({cells:o,cls:'keep'}));
+        sum=600; badge=V('ok','SUM = 600'); note='The true number. The orders table has one row per order — that is its grain.';
+      } else if(cur===1){
+        sql='SELECT SUM(o.amount)\nFROM orders o\nJOIN shipments s ON s.order_id = o.order_id;';
+        cols=['order_id','amount','shipment'];
+        body=ships.map(([sid,oid])=>({cells:[oid, orders.find(o=>o[0]===oid)[1], sid],
+          cls: ships.filter(x=>x[1]===oid).length>1 ? 'drop':'keep'}));
+        sum=body.reduce((n,b)=>n+b.cells[1],0);
+        badge=V('bad','SUM = '+sum);
+        note='The join changed the grain to one row <b>per shipment</b>, so o3\'s 250 is counted three times and o1\'s 200 twice. Revenue is overstated by '+(sum-600)+' — a plausible-looking number that no test catches unless you assert the grain.';
+      } else {
+        sql='SELECT SUM(o.amount), SUM(s.n)\nFROM orders o\nLEFT JOIN (\n  SELECT order_id, COUNT(*) AS n\n  FROM shipments GROUP BY order_id\n) s ON s.order_id = o.order_id;';
+        cols=['order_id','amount','shipments'];
+        body=orders.map(o=>({cells:[o[0],o[1],ships.filter(x=>x[1]===o[0]).length],cls:'keep'}));
+        sum=600; badge=V('ok','SUM = 600');
+        note='Aggregate the many-side <b>down to the grain of the one-side first</b>, then join. Now the join cannot multiply rows, and you still get the shipment count. This rewrite is usually faster too.';
+      }
+      s.main.className='demo-main';
+      s.main.innerHTML=code(sql)+tbl(cols,body,body.length+' rows after the FROM clause');
+      s.out.innerHTML=badge+note;
+    };
+    s.bars.appendChild(btnRow('Query',modes,i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 6. Recursive CTE ---------- */
+DEMOS.recursive = {
+  title:'Recursive CTE, one iteration at a time', blurb:'Anchor, then repeat until the working table comes back empty.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const N=[{id:1,n:'CEO',m:null},{id:2,n:'VP Eng',m:1},{id:3,n:'VP Sales',m:1},{id:4,n:'Dir Platform',m:2},
+             {id:5,n:'Dir Data',m:2},{id:6,n:'Eng A',m:4},{id:7,n:'Eng B',m:4},{id:8,n:'Rep',m:3}];
+    const iters=[[1],[2,3],[4,5,8],[6,7],[]];
+    const levels=[[1],[2,3],[4,5,8],[6,7]];
+    let it=0, play=null;
+    const draw=()=>{
+      const done=new Set(), fresh=new Set(iters[it]||[]);
+      for(let k=0;k<it;k++) iters[k].forEach(i=>done.add(i));
+      let tree='<div class="tree">';
+      levels.forEach((lv,i)=>{ tree+='<div class="lvl"><span class="lname">level '+i+'</span>';
+        lv.forEach(id=>{ const nd=N.find(x=>x.id===id);
+          tree+='<span class="node '+(fresh.has(id)?'new':(done.has(id)?'on':''))+'">'+nd.n+'</span>'; });
+        tree+='</div>'; });
+      tree+='</div>';
+      const acc=[]; for(let k=0;k<=it;k++)(iters[k]||[]).forEach(id=>acc.push({cells:[id,N.find(x=>x.id===id).n,k],cls:iters[it].includes(id)?'hot':'keep'}));
+      s.main.className='demo-main demo-2col';
+      s.main.innerHTML='<div>'+code('WITH RECURSIVE tree AS (\n  SELECT id, name, 0 AS lvl\n  FROM emp WHERE manager_id IS NULL   -- anchor\n  UNION ALL\n  SELECT e.id, e.name, t.lvl + 1\n  FROM emp e JOIN tree t ON e.manager_id = t.id\n)\nSELECT * FROM tree;')+tree+'</div>'
+        +'<div>'+tbl(['id','name','lvl'],acc,'result so far · '+acc.length+' rows')+'</div>';
+      s.out.innerHTML = it===0 ? V('ok','iteration 0')+'The <b>anchor</b> runs once: rows with no manager. This seeds the working table.'
+        : iters[it].length===0 ? V('ok','iteration '+it+' — empty')+'The recursive member returned no rows, so the loop stops. <b>Termination is data-driven, not syntactic.</b> A cycle in the data means this never empties — which is what <code>LIMIT</code> or a visited-path array is for.'
+        : V('warn','iteration '+it)+'The recursive member joins <b>only the previous iteration\'s rows</b>, not the whole accumulated result. That is why depth costs one pass, not a full scan per level.';
+      s.bars.querySelector('#rnext').disabled = it>=iters.length-1;
+    };
+    const bar=document.createElement('div'); bar.className='demo-bar';
+    bar.innerHTML='<span class="lab">Iterate</span>';
+    const mk=(t,f,id)=>{const b=document.createElement('button');b.className='ctl ghost';b.textContent=t;if(id)b.id=id;b.onclick=f;bar.appendChild(b);return b;};
+    mk('Run','',null).onclick=()=>{ clearInterval(play); it=0; draw();
+      play=setInterval(()=>{ if(it>=iters.length-1){clearInterval(play);return;} it++; draw(); },1200); };
+    mk('Next iteration',()=>{clearInterval(play); if(it<iters.length-1){it++;draw();}},'rnext');
+    mk('Reset',()=>{clearInterval(play); it=0; draw();});
+    s.bars.appendChild(bar);
+    draw();
+  }
+};
+
+/* ---------- 7. Ranking on ties ---------- */
+DEMOS.ranking = {
+  title:'Four ways to number rows', blurb:'They agree until there is a tie. Then they disagree permanently.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const d=[['Ana',95],['Ben',88],['Cara',88],['Dev',75],['Eve',75],['Finn',75],['Gus',60]];
+    const rn=[1,2,3,4,5,6,7], rk=[1,2,2,4,4,4,7], dr=[1,2,2,3,3,3,4], nt=[1,1,1,2,2,3,3];
+    const fns=[
+      {n:'ROW_NUMBER()',v:rn,why:'Always 1..n with no gaps and no ties. Arbitrary tie-breaking — Ben and Cara could swap between runs unless you add a deterministic tiebreaker to the ORDER BY. This is the one to use for deduplication.'},
+      {n:'RANK()',v:rk,why:'Ties share a rank, and the next rank <b>skips</b>. Three people tied at 75 occupy positions 4, 5, 6, so the next value is 7. Competition-style ranking.'},
+      {n:'DENSE_RANK()',v:dr,why:'Ties share a rank and the next rank does <b>not</b> skip. Use it when you want "the third-highest distinct score", not "the third-place person".'},
+      {n:'NTILE(3)',v:nt,why:'Splits into 3 buckets as evenly as possible; remainder goes to the earlier buckets, so bucket 1 gets 3 rows and the others 2. Note it will <b>split a tie across buckets</b> — Dev and Eve are in bucket 2, Finn in 3, all with score 75.'}
+    ];
+    let cur=0;
+    const draw=()=>{
+      const f=fns[cur];
+      const body=d.map((r,i)=>({cells:[r[0],r[1],f.v[i]], cls:(i>0&&d[i-1][1]===r[1])||(i<6&&d[i+1][1]===r[1])?'hot':''}));
+      s.main.className='demo-main';
+      s.main.innerHTML=code('SELECT name, score,\n       '+f.n+' OVER (ORDER BY score DESC) AS pos\nFROM scores;')
+        +tbl(['name','score',f.n],body);
+      s.out.innerHTML=V('ok',f.n)+f.why+' Tied rows are highlighted.';
+    };
+    s.bars.appendChild(btnRow('Function',fns.map(f=>f.n),i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 8. Window frames ---------- */
+DEMOS.frames = {
+  title:'Frame explorer — the part everyone skips', blurb:'Click any row to make it the current row. Watch which rows enter the window.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const d=[[1,10],[2,20],[2,30],[3,40],[4,50],[4,60],[4,70],[5,80]];
+    const modes=['ROWS','RANGE'];
+    const starts=[['UNBOUNDED PRECEDING','U'],['2 PRECEDING','P'],['CURRENT ROW','C']];
+    const ends=[['CURRENT ROW','C'],['1 FOLLOWING','F'],['UNBOUNDED FOLLOWING','U']];
+    let mode=0, st=0, en=0, cur=4;
+    const inWin=(i)=>{
+      const n=d.length, day=d[cur][0];
+      if(modes[mode]==='ROWS'){
+        const a = starts[st][1]==='U'?0 : starts[st][1]==='P'?Math.max(0,cur-2) : cur;
+        const b = ends[en][1]==='C'?cur : ends[en][1]==='F'?Math.min(n-1,cur+1) : n-1;
+        return i>=a && i<=b;
+      }
+      const lo = starts[st][1]==='U'?-Infinity : starts[st][1]==='P'?day-2 : day;
+      const hi = ends[en][1]==='C'?day : ends[en][1]==='F'?day+1 : Infinity;
+      return d[i][0]>=lo && d[i][0]<=hi;
+    };
+    const draw=()=>{
+      const win=d.map((_,i)=>inWin(i));
+      const sum=d.filter((_,i)=>win[i]).reduce((n,r)=>n+r[1],0);
+      const body=d.map((r,i)=>({cells:[i+1,r[0],r[1], win[i]?'in':''], cls: i===cur?'cur':(win[i]?'win':'dim')}));
+      s.main.className='demo-main demo-2col';
+      s.main.innerHTML='<div>'+code('SELECT day, val,\n       SUM(val) OVER (\n         ORDER BY day\n         '+modes[mode]+' BETWEEN '+starts[st][0]+'\n              AND '+ends[en][0]+'\n       ) AS windowed\nFROM t;')
+        +'<div class="balance">window SUM for the current row<b>'+sum+'</b></div></div>'
+        +'<div>'+tbl(['#','day','val','frame'],body,'click a row to move the current row')+'</div>';
+      s.main.querySelectorAll('tbody tr').forEach((tr,i)=>{tr.style.cursor='pointer';tr.onclick=()=>{cur=i;draw();};});
+      const tied = d.filter(r=>r[0]===d[cur][0]).length>1;
+      s.out.innerHTML = modes[mode]==='RANGE' && tied
+        ? V('warn','RANGE + ties')+'RANGE frames are defined by <b>values of the ORDER BY column</b>, not positions. Day '+d[cur][0]+' has peers, so all of them enter or leave the window together. This is why a "running total" written with the default frame jumps in steps instead of row by row.'
+        : modes[mode]==='RANGE'
+        ? V('ok','RANGE')+'With no peers at this value, RANGE and ROWS coincide — which is exactly why this bug survives testing on clean data and appears in production.'
+        : V('ok','ROWS')+'ROWS counts physical rows before and after the current one, regardless of ties. Deterministic, and almost always what people actually mean by "last 3 rows".';
+    };
+    s.bars.appendChild(btnRow('Mode',modes,i=>{mode=i;draw();},0));
+    s.bars.appendChild(btnRow('Frame start',starts.map(x=>x[0]),i=>{st=i;draw();},0));
+    s.bars.appendChild(btnRow('Frame end',ends.map(x=>x[0]),i=>{en=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 9. SCD Type 2 ---------- */
+DEMOS.scd2 = {
+  title:'Slowly changing dimension, Type 2', blurb:'History as rows with date ranges, not as overwritten columns.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const steps=[
+      {note:'Customer C7 is created. One version, open-ended, current.', dim:[[1,'C7','Austin','2023-01-01','9999-12-31','Y',0]]},
+      {note:'C7 moves to Denver on 2024-03-15. A Type 1 dimension would <b>overwrite</b> Austin and destroy history. Type 2 closes version 1 and opens version 2.',
+       dim:[[1,'C7','Austin','2023-01-01','2024-03-15','N',1],[2,'C7','Denver','2024-03-15','9999-12-31','Y',2]]},
+      {note:'Another move, 2025-06-01. Three versions now. The <b>surrogate key</b> — not the customer id — is what facts point to, which is the whole reason surrogate keys exist.',
+       dim:[[1,'C7','Austin','2023-01-01','2024-03-15','N',1],[2,'C7','Denver','2024-03-15','2025-06-01','N',1],[3,'C7','Boston','2025-06-01','9999-12-31','Y',2]]},
+      {note:'An order placed 2024-08-20 joins <b>as of that date</b>, so it attributes to Denver — not to the current city. Joining on customer_id and is_current = Y would have silently restated two years of history as Boston.',
+       dim:[[1,'C7','Austin','2023-01-01','2024-03-15','N',3],[2,'C7','Denver','2024-03-15','2025-06-01','N',4],[3,'C7','Boston','2025-06-01','9999-12-31','Y',3]]}
+    ];
+    let i=0;
+    const draw=()=>{
+      const st=steps[i];
+      const body=st.dim.map(r=>({cells:r.slice(0,6), cls:r[6]===2?'hot':r[6]===4?'cur':r[6]===1?'dim':''}));
+      s.main.className='demo-main';
+      s.main.innerHTML=code(i<3
+        ? 'UPDATE dim_customer SET valid_to = DATE :d, is_current = false\nWHERE customer_id = :c AND is_current;\n\nINSERT INTO dim_customer\n  (customer_id, city, valid_from, valid_to, is_current)\nVALUES (:c, :city, DATE :d, DATE 9999-12-31, true);'
+        : 'SELECT f.order_id, d.city\nFROM fact_orders f\nJOIN dim_customer d\n  ON d.customer_id = f.customer_id\n AND f.order_date >= d.valid_from\n AND f.order_date <  d.valid_to;   -- as-of join')
+        +tbl(['sk','customer_id','city','valid_from','valid_to','is_current'],body)
+        +(i===3?'<div style="height:10px"></div>'+tbl(['order_id','customer_id','order_date'],[{cells:['ord-991','C7','2024-08-20'],cls:'hot'}],'fact_orders'):'');
+      s.out.innerHTML=V(i===3?'ok':'warn','version '+Math.min(i+1,3))+st.note;
+    };
+    const bar=document.createElement('div'); bar.className='demo-bar'; bar.innerHTML='<span class="lab">Timeline</span>';
+    ['Next event','Reset'].forEach((t,k)=>{const b=document.createElement('button');b.className='ctl ghost';b.textContent=t;
+      b.onclick=()=>{ i = k===0 ? Math.min(steps.length-1,i+1) : 0; draw(); }; bar.appendChild(b);});
+    s.bars.appendChild(bar); draw();
+  }
+};
+
+/* ---------- 10. Isolation levels ---------- */
+DEMOS.isolation = {
+  title:'Two sessions, one row', blurb:'Pick an isolation level and step through. The anomaly appears or it does not.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const levels=['READ COMMITTED','REPEATABLE READ','SERIALIZABLE'];
+    const scen=['Non-repeatable read','Lost update'];
+    let lv=0, sc=0, st=0;
+    const script=()=>{
+      if(sc===0) return [
+        {a:'BEGIN;',                      b:'',            bal:100, n:'Session A opens a transaction and takes its snapshot.'},
+        {a:'SELECT balance; -- 100',      b:'',            bal:100, n:'A reads 100.'},
+        {a:'',  b:'BEGIN; UPDATE accounts SET balance = 50;', bal:100, n:'B modifies the row but has not committed. Under every level, A cannot see uncommitted data — a dirty read is impossible in any of these.'},
+        {a:'',  b:'COMMIT;',              bal:50,  n:'B commits. The row on disk is now 50.'},
+        {a:'SELECT balance; -- ?',        b:'',            bal:50,
+         n: lv===0 ? 'A reads <b>50</b>. The same query returned a different value inside one transaction: a <b>non-repeatable read</b>. READ COMMITTED takes a new snapshot per statement.'
+                   : 'A still reads <b>100</b>. REPEATABLE READ and SERIALIZABLE pin the snapshot at transaction start, so A sees a consistent view for its whole life.'},
+        {a:'COMMIT;', b:'', bal:50, n: lv===0 ? V('bad','anomaly allowed')+'Any report that runs two queries in one transaction can disagree with itself.' : V('ok','anomaly prevented')+'The cost is snapshot retention — long transactions hold old row versions alive and bloat the table.'}
+      ];
+      return [
+        {a:'BEGIN; SELECT balance; -- 100', b:'',                          bal:100, n:'A reads 100, intending to subtract 30 in application code.'},
+        {a:'', b:'BEGIN; SELECT balance; -- 100',                          bal:100, n:'B reads the same 100, intending to subtract 50. Neither has taken a lock — plain SELECT does not.'},
+        {a:'UPDATE accounts SET balance = 70; COMMIT;', b:'',              bal:70,  n:'A writes 100 − 30 = 70 and commits.'},
+        {a:'', b:'UPDATE accounts SET balance = 50;',                      bal:70,
+         n: lv===0 ? 'B blocks until A commits, then applies its own computed value. It never re-reads.'
+                   : 'B\'s UPDATE touches a row modified after B\'s snapshot. The engine raises a <b>serialization failure</b> and B aborts.'},
+        {a:'', b: lv===0 ? 'COMMIT;' : '-- ERROR: could not serialize access', bal: lv===0?50:70,
+         n: lv===0 ? V('bad','A\'s deduction is gone')+'Final balance 50, not 20. Both transactions committed successfully and money vanished. Isolation level does not fix this — <b>SELECT … FOR UPDATE</b>, an atomic <code>SET balance = balance - 30</code>, or a version column does.'
+                   : V('warn','B must retry')+'Correct, but note the contract: under these levels your application <b>must</b> handle serialization failures and retry. Code that assumes commits always succeed is broken here.'}
+      ];
+    };
+    const draw=()=>{
+      const sq=script(); st=Math.min(st,sq.length-1);
+      const cell=k=>'<div class="sess"><h5>session '+(k==='a'?'A':'B')+'</h5><ol>'+sq.map((x,i)=>
+        '<li class="'+(i===st?'now':(i<st?'on':''))+'">'+(x[k]?hl(x[k]):'&nbsp;')+'</li>').join('')+'</ol></div>';
+      s.main.className='demo-main';
+      s.main.innerHTML='<div class="sessions">'+cell('a')+cell('b')+'</div>'
+        +'<div class="balance">committed balance<b>'+sq[st].bal+'</b></div>';
+      s.out.innerHTML=(sq[st].n.indexOf('verdict')>-1?'':V('ok','step '+(st+1)+' / '+sq.length))+sq[st].n;
+    };
+    s.bars.appendChild(btnRow('Isolation',levels,i=>{lv=i;st=0;draw();},0));
+    s.bars.appendChild(btnRow('Scenario',scen,i=>{sc=i;st=0;draw();},0));
+    const bar=document.createElement('div'); bar.className='demo-bar'; bar.innerHTML='<span class="lab">Step</span>';
+    [['Next',1],['Back',-1],['Reset',0]].forEach(([t,d])=>{const b=document.createElement('button');
+      b.className='ctl ghost';b.textContent=t;b.onclick=()=>{ st = d===0?0:Math.max(0,st+d); draw(); };bar.appendChild(b);});
+    s.bars.appendChild(bar); draw();
+  }
+};
+
+/* ---------- 11. Scan vs seek ---------- */
+DEMOS.scan_seek = {
+  title:'Rows read, not rows returned', blurb:'Same two matching rows. Wildly different amount of work.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const N=64, HITS=[18,51];
+    const modes=[
+      {n:'Seq Scan (no index)', sql:"SELECT * FROM events WHERE user_id = 42;",
+       seq:[...Array(N).keys()],
+       note:'No usable index, so the engine reads every row and tests the predicate on each. 64 rows read to return 2. On a billion-row table this is the difference between 5 ms and 5 minutes.'},
+      {n:'Index Seek', sql:"CREATE INDEX ON events (user_id);\nSELECT * FROM events WHERE user_id = 42;",
+       seq:[0,4,12,18,51],
+       note:'The B-tree is descended once — three or four node reads regardless of table size — then only the matching rows are fetched. Cost grows with the <b>log</b> of the table, not the table.'},
+      {n:'Non-sargable predicate', sql:"-- index on (created_at) exists\nSELECT * FROM events\nWHERE date_trunc('day', created_at) = DATE '2024-05-01';",
+       seq:[...Array(N).keys()],
+       note:'The index stores <code>created_at</code>, not <code>date_trunc(created_at)</code>, so the engine must compute the function for every row — full scan. Rewrite as a range: <code>created_at &gt;= \'2024-05-01\' AND created_at &lt; \'2024-05-02\'</code>. Wrapping an indexed column in a function is the single most common accidental de-optimisation.'}
+    ];
+    let cur=0, tm=null;
+    const cells=()=>{ let h='<div class="cells">'; for(let i=0;i<N;i++) h+='<div class="cell" data-i="'+i+'"></div>'; return h+'</div>'; };
+    const draw=()=>{
+      clearInterval(tm);
+      const m=modes[cur];
+      s.main.className='demo-main';
+      s.main.innerHTML=code(m.sql)+cells();
+      s.out.innerHTML=V('ok','0 rows read')+m.note;
+      let k=0;
+      tm=setInterval(()=>{
+        if(k>=m.seq.length){ clearInterval(tm);
+          s.out.innerHTML=V(m.seq.length>20?'bad':'ok', m.seq.length+' rows read → 2 returned')+m.note; return; }
+        const idx=m.seq[k];
+        const el=s.main.querySelector('[data-i="'+idx+'"]');
+        if(el) el.className='cell '+(HITS.includes(idx)?'hit':'read');
+        k++;
+        s.out.innerHTML=V('warn',k+' rows read')+m.note;
+      }, m.seq.length>20?26:260);
+    };
+    s.bars.appendChild(btnRow('Access path',modes.map(m=>m.n),i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+
+/* ---------- 12. UNNEST ---------- */
+DEMOS.unnest = {
+  title:'Arrays are a join in disguise', blurb:'UNNEST multiplies rows exactly the way a one-to-many join does.',
+  build(host){
+    const s=demoShell(host,this.title,this.blurb);
+    const modes=['stored row','UNNEST','ARRAY_AGG back'];
+    let cur=0;
+    const draw=()=>{
+      let sql,cols,body,note,badge;
+      if(cur===0){ sql='SELECT order_id, amount, tags FROM orders;';
+        cols=['order_id','amount','tags']; body=[{cells:['A1',300,'{fragile,gift,rush}'],cls:'keep'}];
+        badge=V('ok','1 row'); note='One row per order. The array is a single value in a single cell.'; }
+      else if(cur===1){ sql='SELECT order_id, amount, tag\nFROM orders, UNNEST(tags) AS tag;';
+        cols=['order_id','amount','tag'];
+        body=['fragile','gift','rush'].map(t=>({cells:['A1',300,t],cls:'drop'}));
+        badge=V('bad','3 rows · SUM(amount) = 900');
+        note='The grain is now one row <b>per tag</b>. Any aggregate over <code>amount</code> triples. Same arithmetic as the fan-out demo — arrays just hide it better, because there is no visible JOIN keyword to make you suspicious.'; }
+      else { sql='SELECT order_id, ARRAY_AGG(tag) AS tags\nFROM exploded\nGROUP BY order_id;';
+        cols=['order_id','tags']; body=[{cells:['A1','{fragile,gift,rush}'],cls:'keep'}];
+        badge=V('ok','1 row'); note='ARRAY_AGG collapses back to the original grain. UNNEST and ARRAY_AGG are inverses — one changes the grain, the other restores it. Know which one your query is on the far side of.'; }
+      s.main.className='demo-main';
+      s.main.innerHTML=code(sql)+tbl(cols,body);
+      s.out.innerHTML=badge+note;
+    };
+    s.bars.appendChild(btnRow('Shape',modes,i=>{cur=i;draw();},0));
+    draw();
+  }
+};
+/* ============================================================
+   TIER CONTENT — 00 to 04
+   ============================================================ */
+const TIERS = [];
+
+TIERS.push({
+n:'00', name:'Mental models', sub:'Before any syntax at all',
+intro:`Everything that goes wrong later goes wrong here first. SQL is not a language for telling a computer <b>how</b> to get data; it is a language for describing a result and surrendering the method. Four ideas carry the rest of the curriculum.`,
+concepts:[
+ {t:'A table is a set, not a spreadsheet',
+  b:`Rows have no position and no inherent order. There is no "first row" and no hidden row number. The engine may return rows in whatever order the plan happens to produce — and that order changes when the data grows, an index appears, or the query goes parallel.`,
+  sql:`-- Both legal. Only one is deterministic.\nSELECT * FROM orders LIMIT 10;              -- arbitrary 10 rows\nSELECT * FROM orders ORDER BY id LIMIT 10;  -- the first 10 by id`,
+  trap:`Code that "worked" for a year because results happened to come back in insertion order breaks the day the table gets big enough to be scanned in parallel. Nothing about the query changed.`},
+ {t:'Declarative, not imperative',
+  b:`You state the <b>what</b>; the planner chooses the <b>how</b> — which index, which join algorithm, what order to apply things in. Two differently written queries with identical semantics often get identical plans. This is why "optimising" by rearranging clauses usually does nothing, and why changing the <i>shape</i> of the question usually does a lot.`},
+ {t:'NULL is not a value — it is the absence of one',
+  b:`NULL means unknown. Any comparison with an unknown yields <b>UNKNOWN</b>, a third truth value alongside TRUE and FALSE. And <code>WHERE</code> keeps only rows where the predicate is TRUE — UNKNOWN is discarded exactly like FALSE. That one asymmetry generates a large fraction of all wrong-answer bugs in SQL.`,
+  demo:'null_logic'},
+ {t:'Three-valued logic, in full',
+  b:`<code>NOT UNKNOWN</code> is UNKNOWN. <code>UNKNOWN AND FALSE</code> is FALSE (one false is enough). <code>UNKNOWN OR TRUE</code> is TRUE. Everything else involving UNKNOWN stays UNKNOWN.`,
+  sql:`SELECT NULL = NULL;        -- UNKNOWN, not true\nSELECT NULL <> 1;          -- UNKNOWN\nSELECT NULL IS NULL;       -- true\nSELECT 1 IS DISTINCT FROM NULL;  -- true  (NULL-aware <>)\nSELECT COALESCE(NULL, 0);  -- 0`},
+ {t:'Sets, not loops',
+  b:`If you find yourself thinking "for each row, go and look up…", you are describing a nested loop, and the engine may or may not choose one. Think instead: "which set do I want, and what set do I combine it with?" Row-at-a-time thinking produces cursors, correlated subqueries in SELECT lists, and application-side joins — all of which are ten to a thousand times slower than the set-based equivalent.`},
+ {t:'Grain: the sentence you must be able to finish',
+  b:`Every table and every query result has a grain: <b>"one row per ___"</b>. One row per order. One row per order line. One row per customer per day. Almost every silent bug in this course is the same bug — an operation changed the grain and the author did not notice. Say the grain out loud before and after every join, and you eliminate most of them.`},
+ {t:'Logical execution order',
+  b:`FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT. The interactive walkthrough at the top of this page is this rule made visible; go back to it whenever a clause behaves surprisingly. It explains alias visibility, WHERE vs HAVING, and why LIMIT never makes an aggregate cheap.`}
+],
+quiz:[
+ {q:`Table <code>t</code> has one column <code>c</code> with three rows: 'A', 'B', and NULL. What does this return?`,
+  sql:`SELECT COUNT(*) FROM t WHERE c <> 'A';`,
+  opts:['0','1','2','3'], a:1,
+  why:`Only 'B' survives. <code>NULL &lt;&gt; 'A'</code> evaluates to UNKNOWN, and WHERE keeps only TRUE — so the NULL row is discarded even though you asked for "not A". If you want it back: <code>WHERE c IS DISTINCT FROM 'A'</code> or <code>WHERE c &lt;&gt; 'A' OR c IS NULL</code>.`},
+ {q:`Your query has no ORDER BY but has returned rows in id order every time you have run it for six months. Is that order guaranteed?`,
+  opts:['Yes — rows come back in insertion order','Yes — the primary key imposes an order','Only if the table has a clustered index','No. It is never guaranteed without ORDER BY'], a:3,
+  why:`Row order is a property of the plan, not of the table. A parallel scan, a new index, a change in statistics, or a partitioned table can all reorder results with no change to your SQL. "It has always worked" is the most common preamble to this bug.`},
+ {q:`Why does <code>WHERE revenue > 200</code> fail when <code>revenue</code> is defined as <code>SUM(amount) AS revenue</code> in the SELECT list?`,
+  opts:['Aggregates cannot appear in WHERE at all, so aliases cannot either','WHERE runs before SELECT, so the alias does not exist yet','The alias needs to be double-quoted','It only fails in some dialects'], a:1,
+  why:`Both halves matter. WHERE is stage 2; SELECT — where aliasing happens — is stage 5. So the name does not exist yet, <i>and</i> the group has not been formed yet. HAVING (stage 4) can see the aggregate; ORDER BY (stage 6) can see the alias.`},
+ {q:`A colleague says a fact table is "one row per order". You then join it to order_lines. What is the first thing to check?`,
+  opts:['Whether the join keys are indexed','Whether the grain of the result is still one row per order','Whether the join is INNER or LEFT','Whether the tables are in the same schema'], a:1,
+  why:`All four matter eventually, but the grain question is the one that silently corrupts numbers. After the join the grain is one row per order line, so every aggregate over order-level columns is now multiplied by the line count.`}
+]});
+
+TIERS.push({
+n:'01', name:'Retrieval', sub:'One table, correctly',
+intro:`The unglamorous tier. Its failure mode is not "the query errors" — it is <b>off-by-a-boundary</b>: a day of data missing, an integer division truncating, a sort that puts NULLs somewhere you did not expect.`,
+concepts:[
+ {t:'Predicates and their edges',
+  b:`<code>IN</code> is shorthand for chained ORs. <code>BETWEEN</code> is inclusive on <b>both</b> ends. <code>LIKE</code> uses <code>%</code> (any run) and <code>_</code> (one character); a leading <code>%</code> means no index can help. Case sensitivity of <code>LIKE</code> is dialect-dependent — Postgres has <code>ILIKE</code>, others rely on collation.`,
+  sql:`WHERE status IN ('paid','settled')      -- = OR\nWHERE amount BETWEEN 100 AND 200        -- includes 100 and 200\nWHERE name LIKE 'Sm%'                   -- index-friendly\nWHERE name LIKE '%son'                  -- full scan`},
+ {t:'Ranges over timestamps',
+  b:`A date literal compared to a timestamp column becomes midnight. Closed ranges therefore lose the final day. Use half-open ranges everywhere: <code>&gt;= start AND &lt; next_boundary</code>. This is correct at every grain and needs no thought about precision.`,
+  demo:'between_trap'},
+ {t:'ORDER BY, and where NULLs land',
+  b:`Sort by several keys, each with its own direction. NULL ordering is <b>not</b> standard across engines: Postgres treats NULL as largest (so first on DESC), while SQL Server and MySQL treat it as smallest. Be explicit with <code>NULLS LAST</code> where supported, or sort on a computed flag where it is not.`,
+  sql:`ORDER BY region ASC, revenue DESC NULLS LAST, id ASC`,
+  trap:`Add a final unique tiebreaker (usually the primary key) to any ORDER BY used for pagination. Without it, two rows with equal sort keys can swap between pages and a row is shown twice while another is never shown at all.`},
+ {t:'LIMIT, OFFSET, and why pagination rots',
+  b:`<code>OFFSET 100000</code> does not skip work — the engine still produces and discards 100,000 rows. Page load time grows linearly with page number. The fix is <b>keyset pagination</b>: remember the last row's sort key and ask for rows after it.`,
+  sql:`-- degrades with depth\nSELECT * FROM orders ORDER BY id LIMIT 20 OFFSET 100000;\n\n-- constant time at any depth\nSELECT * FROM orders WHERE id > :last_seen_id ORDER BY id LIMIT 20;`},
+ {t:'CASE expressions',
+  b:`<code>CASE</code> is an expression, so it works anywhere a value works: in SELECT, in ORDER BY, inside an aggregate, in a GROUP BY. It stops at the first matching WHEN. An omitted ELSE returns NULL — which is a frequent accidental source of the NULL problems from tier 00.`,
+  sql:`SELECT CASE WHEN amount >= 1000 THEN 'large'\n            WHEN amount >= 100  THEN 'medium'\n            ELSE 'small' END AS band,\n       COUNT(*)\nFROM orders GROUP BY 1;`},
+ {t:'Types and implicit conversion',
+  b:`Integer division truncates: <code>5/2</code> is 2, not 2.5. Comparing a number to a string may silently cast one side, and once a column is cast, its index is unusable. String comparison is lexicographic, so <code>'10' &lt; '9'</code> is true.`,
+  sql:`SELECT 5 / 2;                    -- 2\nSELECT 5.0 / 2;                 -- 2.5\nSELECT COUNT(*) * 1.0 / NULLIF(total, 0);  -- safe ratio`},
+ {t:'DISTINCT: legitimate use vs symptom',
+  b:`Legitimate when the source genuinely contains duplicates you want collapsed. A symptom when it was added because a join started producing repeats — that is fan-out, and DISTINCT hides the duplication without fixing the arithmetic underneath. If removing DISTINCT changes your row count, you have a grain problem to diagnose, not a keyword to add.`}
+],
+quiz:[
+ {q:`Orders exist at 2024-01-31 14:20. Which predicate includes them in January?`,
+  opts:[`created_at BETWEEN '2024-01-01' AND '2024-01-31'`,`created_at &gt;= '2024-01-01' AND created_at &lt; '2024-02-01'`,`DATE(created_at) BETWEEN '2024-01-01' AND '2024-01-31'`,`Both B and C return the right rows`], a:3,
+  why:`B and C both include the row. But C wraps the column in a function, so it cannot use an index on <code>created_at</code> — correct answer, bad plan. B is correct <i>and</i> sargable, which is why half-open ranges are the standard idiom.`},
+ {q:`<code>total_orders</code> and <code>total_customers</code> are both integer columns. What does <code>SELECT total_orders / total_customers</code> return when the values are 7 and 2?`,
+  opts:['3.5','3','4','An error'], a:1,
+  why:`Integer division truncates toward zero. Multiply one side by 1.0, or cast, before dividing. And wrap the divisor in <code>NULLIF(x, 0)</code> unless you enjoy division-by-zero pages at 3am.`},
+ {q:`A dashboard paginates with <code>ORDER BY created_at DESC LIMIT 20 OFFSET n</code>. Users report seeing the same record on two different pages. Most likely cause?`,
+  opts:['A caching bug in the front end','Ties in created_at with no unique tiebreaker in the ORDER BY','OFFSET is zero-indexed','The index on created_at is fragmented'], a:1,
+  why:`When sort keys tie, the relative order of tied rows is undefined and can differ between the two queries that produce page 1 and page 2. Append a unique column: <code>ORDER BY created_at DESC, id DESC</code>. The same fix makes keyset pagination possible.`},
+ {q:`Why does page 5000 of an OFFSET-based list load far slower than page 1?`,
+  opts:['The index degrades at depth','The engine still produces and discards every row before the offset','Later rows are physically further away on disk','It does not — that is a client-side issue'], a:1,
+  why:`OFFSET is applied last, after the rows have been generated and sorted. Cost is proportional to offset + limit. Keyset pagination turns it into a range seek that costs the same at any depth.`}
+]});
+
+TIERS.push({
+n:'02', name:'Aggregation', sub:'Changing the grain on purpose',
+intro:`GROUP BY is the first operation that deliberately changes the grain. Its failure mode is a number that is <b>close enough to look right</b>: an average over the wrong denominator, a count that quietly excludes NULLs, a filter applied one stage too late.`,
+concepts:[
+ {t:'GROUP BY sets the new grain',
+  b:`After grouping, one output row represents many input rows. Every column in the SELECT list must therefore be either in the GROUP BY or wrapped in an aggregate — otherwise the value is undefined. Most engines reject it; MySQL historically returned an arbitrary row's value, which is why <code>ONLY_FULL_GROUP_BY</code> exists.`,
+  sql:`SELECT region, COUNT(*) AS orders, SUM(amount) AS revenue\nFROM orders\nGROUP BY region;   -- grain: one row per region`},
+ {t:'COUNT, SUM and AVG all skip NULL',
+  b:`<code>COUNT(*)</code> counts rows. <code>COUNT(col)</code> counts non-NULL values. <code>AVG(col)</code> divides by <code>COUNT(col)</code>, not by <code>COUNT(*)</code>. If missing data should count as zero, you have to say so.`,
+  demo:'count_avg'},
+ {t:'WHERE vs HAVING',
+  b:`Same job, different stage. WHERE filters rows before grouping; HAVING filters groups after. Anything expressible in WHERE belongs in WHERE — filtering earlier means fewer rows to aggregate. HAVING is only for conditions on the aggregate itself.`,
+  sql:`SELECT region, SUM(amount) AS revenue\nFROM orders\nWHERE status = 'paid'        -- row-level: cheap, runs first\nGROUP BY region\nHAVING SUM(amount) > 10000;  -- group-level: only possible here`},
+ {t:'Conditional aggregation',
+  b:`Aggregating a CASE expression pivots without any PIVOT syntax, and computes several differently-filtered measures in a single pass over the data. Postgres and the standard also offer <code>FILTER (WHERE …)</code>, which reads better.`,
+  sql:`SELECT region,\n  SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid,\n  COUNT(*) FILTER (WHERE status = 'refunded')          AS refunds,\n  AVG(amount) FILTER (WHERE channel = 'web')           AS web_avg\nFROM orders GROUP BY region;`,
+  trap:`Two separate queries UNIONed together, or the same table joined to itself once per measure, are the usual alternatives. Both read the table multiple times. Conditional aggregation reads it once.`},
+ {t:'Subtotals: GROUPING SETS, ROLLUP, CUBE',
+  b:`<code>ROLLUP(a,b)</code> produces the a+b detail, the a subtotal, and the grand total in one pass. <code>CUBE</code> produces every combination. Subtotal rows show NULL in the rolled-up columns — use <code>GROUPING(col)</code> to distinguish "this is a subtotal" from "this value was genuinely NULL".`,
+  sql:`SELECT region, channel, SUM(amount),\n       GROUPING(channel) AS is_subtotal\nFROM orders\nGROUP BY ROLLUP (region, channel);`}
+],
+quiz:[
+ {q:`A table has 100 rows. <code>score</code> is NULL in 40 of them; the other 60 sum to 300. What does <code>AVG(score)</code> return?`,
+  opts:['3.0','5.0','It errors','NULL'], a:1,
+  why:`300 / 60 = 5.0. AVG divides by the count of non-NULL values. If your business definition is "unscored counts as zero", the correct expression is <code>AVG(COALESCE(score, 0))</code> = 3.0. Two defensible numbers, and the query gives you no hint which one you asked for.`},
+ {q:`You need revenue by region for paid orders only. Where does <code>status = 'paid'</code> belong?`,
+  opts:['HAVING — it filters the result','WHERE — it is a row-level condition','Either; they are equivalent','In the JOIN condition'], a:1,
+  why:`It only reads a column of the row, so it can run at stage 2 instead of stage 4. Putting it in HAVING aggregates every row first and then throws groups away. Same answer, more work — and on a large table, much more.`},
+ {q:`What does this return for a region with 10 orders, 4 of them refunded?`,
+  sql:`SELECT region,\n       COUNT(*) AS a,\n       COUNT(CASE WHEN status = 'refunded' THEN 1 END) AS b\nFROM orders GROUP BY region;`,
+  opts:['a=10, b=10','a=10, b=4','a=10, b=6','a=4, b=4'], a:1,
+  why:`The CASE has no ELSE, so non-refunded rows produce NULL — and COUNT ignores NULL. This is the idiomatic conditional count. Note that <code>SUM(CASE … THEN 1 ELSE 0 END)</code> gives the same answer by a different route, and that swapping COUNT for SUM without adding the ELSE would give NULL-heavy nonsense.`},
+ {q:`In a <code>GROUP BY ROLLUP(region, channel)</code> result you see a row with channel = NULL. What does that mean?`,
+  opts:['It is definitely a subtotal row','It is definitely a real NULL channel','It could be either — use GROUPING(channel) to tell','ROLLUP never produces NULLs'], a:2,
+  why:`ROLLUP marks rolled-up columns with NULL, which is indistinguishable from data that was genuinely NULL. <code>GROUPING(channel)</code> returns 1 for subtotal rows and 0 for real ones. Reports that skip this quietly double-count a NULL category into the subtotal line.`}
+]});
+
+TIERS.push({
+n:'03', name:'Joins and set operations', sub:'Where wrong answers are born',
+intro:`If you audit real production SQL, this is where the money is lost. Not in syntax errors — in <b>row multiplication</b> and in <b>outer joins silently demoted to inner joins</b>. Both produce clean, confident, wrong numbers.`,
+concepts:[
+ {t:'The join types',
+  b:`INNER keeps matched pairs. LEFT keeps all left rows, NULL-extending unmatched ones. RIGHT is its mirror. FULL keeps both sides. CROSS pairs everything with everything — which is also what a forgotten join condition produces.`,
+  demo:'join_types'},
+ {t:'ON versus WHERE on an outer join',
+  b:`On an outer join these are <b>not</b> interchangeable. Conditions in <code>ON</code> decide what counts as a match. Conditions in <code>WHERE</code> run after the NULL-extension, and any test against a NULL-extended right column evaluates to UNKNOWN — so those rows are discarded and your LEFT JOIN becomes an INNER JOIN.`,
+  sql:`-- keeps all customers, matches only web orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id AND o.channel = 'web'\n\n-- silently drops customers with no web orders\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.channel = 'web'`},
+ {t:'Fan-out: the join that multiplies',
+  b:`Joining a one-side to a many-side changes the grain to the many-side. Every aggregate over one-side columns is then inflated by the match count. Nothing errors. The fix is to <b>aggregate the many-side down to the one-side grain first</b>, then join.`,
+  demo:'fanout'},
+ {t:'Semi-joins and anti-joins',
+  b:`When you only need to know <i>whether</i> a match exists, <code>EXISTS</code> and <code>NOT EXISTS</code> express that directly — and cannot fan out, because they never add columns. <code>NOT IN</code> is the dangerous one: if the subquery returns even one NULL, the whole result is empty, because "x not in {1, 2, NULL}" is UNKNOWN for every x.`,
+  sql:`-- safe\nWHERE NOT EXISTS (SELECT 1 FROM refunds r WHERE r.order_id = o.id)\n\n-- returns zero rows if refunds.order_id contains any NULL\nWHERE o.id NOT IN (SELECT order_id FROM refunds)`,
+  trap:`A <code>JOIN</code> used purely as an existence test is a fan-out waiting to happen, and the DISTINCT people add to fix it is both a performance cost and a disguise. Use EXISTS.`},
+ {t:'Set operations',
+  b:`<code>UNION</code> removes duplicates, which means it sorts or hashes the whole result — often the most expensive line in a query. <code>UNION ALL</code> just concatenates. Use ALL unless you have a specific reason to deduplicate, and if you do, ask why duplicates exist.`,
+  sql:`SELECT id FROM a UNION ALL SELECT id FROM b;  -- concatenate, cheap\nSELECT id FROM a UNION     SELECT id FROM b;  -- deduplicate, sorts\nSELECT id FROM a EXCEPT    SELECT id FROM b;  -- set difference`},
+ {t:'Non-equi and lateral joins',
+  b:`Join conditions are not restricted to equality — range joins (<code>ON f.ts &gt;= d.valid_from AND f.ts &lt; d.valid_to</code>) are how as-of joins against a Type 2 dimension work. <code>LATERAL</code> (or <code>CROSS APPLY</code> in T-SQL) lets the right-hand subquery reference the current left row, which is how you get "the three most recent orders per customer" without a window function.`}
+],
+quiz:[
+ {q:`You want every customer, with their web orders if any. Which is correct?`,
+  opts:[`LEFT JOIN orders o ON o.cust_id = c.id WHERE o.channel = 'web'`,`LEFT JOIN orders o ON o.cust_id = c.id AND o.channel = 'web'`,`INNER JOIN orders o ON o.cust_id = c.id WHERE o.channel = 'web'`,`A and B are equivalent`], a:1,
+  why:`Putting the channel test in WHERE filters after NULL-extension: customers with no web orders have <code>o.channel</code> = NULL, the predicate is UNKNOWN, and they are dropped. You have written an INNER JOIN with extra steps. In <code>ON</code>, the condition defines what counts as a match and the unmatched customers survive.`},
+ {q:`<code>refunds.order_id</code> contains 500 values, one of which is NULL. How many rows does this return?`,
+  sql:`SELECT COUNT(*) FROM orders\nWHERE id NOT IN (SELECT order_id FROM refunds);`,
+  opts:['All orders except the 499 refunded ones','Zero','It errors','All orders'], a:1,
+  why:`<code>x NOT IN (1, 2, NULL)</code> expands to <code>x &lt;&gt; 1 AND x &lt;&gt; 2 AND x &lt;&gt; NULL</code>. That last term is UNKNOWN, so the whole conjunction can never be TRUE. Zero rows, no error, no warning. <code>NOT EXISTS</code> has no such behaviour and is the correct default.`},
+ {q:`Orders: o1 = 200, o2 = 150, o3 = 250. Shipments: two for o1, one for o2, three for o3. What does <code>SUM(o.amount)</code> return after <code>orders JOIN shipments</code>?`,
+  opts:['600','1300','900','1150'], a:1,
+  why:`200×2 + 150×1 + 250×3 = 1300. The join changed the grain to one row per shipment, so order amounts repeat. Pre-aggregate shipments to one row per order before joining, and the total returns to 600.`},
+ {q:`Table A has 1,000 rows and table B has 1,000 rows, with 200 values in common. How many rows does <code>SELECT id FROM a UNION ALL SELECT id FROM b</code> return?`,
+  opts:['1,800','2,000','1,200','200'], a:1,
+  why:`UNION ALL concatenates: 2,000. Plain <code>UNION</code> would deduplicate to 1,800 and pay for a sort or hash to do it. On large result sets that deduplication is frequently the dominant cost in the query, and frequently not needed.`}
+]});
+
+TIERS.push({
+n:'04', name:'Composition', sub:'Queries built from queries',
+intro:`This tier is about making a 200-line question survivable. The technical content is small; the discipline — naming each step so it can be read, tested and reused — is what separates SQL other people can maintain from SQL they rewrite.`,
+concepts:[
+ {t:'Three kinds of subquery',
+  b:`A <b>scalar</b> subquery returns one row and one column and can be used anywhere a value can. A <b>table</b> subquery (derived table) appears in FROM and behaves like a table. An <b>IN-list</b> subquery returns one column and is tested against — with the NULL caveat from tier 03.`,
+  sql:`SELECT o.*,\n       (SELECT name FROM customers c WHERE c.id = o.customer_id) AS cust  -- scalar\nFROM orders o\nJOIN (SELECT customer_id, COUNT(*) n FROM orders GROUP BY 1) t              -- derived\n  ON t.customer_id = o.customer_id;`},
+ {t:'Correlated subqueries and EXISTS',
+  b:`A correlated subquery references the outer row, so it is conceptually evaluated once per row. Planners often rewrite it into a join or a hash semi-join — but not always, and a correlated scalar subquery in a SELECT list over a large table is a classic accidental N+1. <code>EXISTS</code> can stop at the first match, which is why it usually beats <code>IN</code> for existence tests.`},
+ {t:'CTEs: naming the steps',
+  b:`<code>WITH</code> gives a subquery a name. Chain them and a long transformation reads as a sequence of small, individually inspectable steps — you can select from any one of them while debugging. Beware the assumption that a CTE is computed once: engines differ, and referencing the same CTE five times may mean five evaluations.`,
+  sql:`WITH paid AS (\n  SELECT * FROM orders WHERE status = 'paid'\n), by_region AS (\n  SELECT region, SUM(amount) AS revenue FROM paid GROUP BY region\n)\nSELECT * FROM by_region WHERE revenue > 10000;`,
+  trap:`Postgres before v12 always materialised CTEs — an optimisation fence that could make a CTE far slower than the equivalent subquery. Since v12 it inlines by default, and <code>MATERIALIZED</code> / <code>NOT MATERIALIZED</code> let you force it. Other engines inline, cache, or spool. Check yours before assuming.`},
+ {t:'Recursive CTEs',
+  b:`An <b>anchor</b> query seeds a working table; a <b>recursive member</b> joins against only the previous iteration's rows; <code>UNION ALL</code> accumulates. It stops when an iteration produces no rows. Uses: org hierarchies, bill of materials, graph reachability, and generating a date spine to fill gaps in sparse time series.`,
+  demo:'recursive'},
+ {t:'CTE vs view vs temp table vs materialized view',
+  b:`<b>CTE</b>: scoped to one statement; use for readability. <b>View</b>: a saved query, re-executed each time; use for a stable interface. <b>Materialized view</b>: stored results with an explicit refresh; use when the same expensive aggregate is read many times. <b>Temp table</b>: real, indexable, and analysable storage; use when an intermediate result is large, reused several times, or needs its own index and statistics.`,
+  sql:`-- reused four times downstream, 40M rows: a temp table beats a CTE\nCREATE TEMP TABLE recent AS\nSELECT * FROM events WHERE ts >= now() - interval '7 days';\nCREATE INDEX ON recent (user_id);\nANALYZE recent;`}
+],
+quiz:[
+ {q:`What terminates a recursive CTE?`,
+  opts:['A fixed recursion depth limit','The recursive member returning zero rows','Reaching the LIMIT clause','A MAXRECURSION hint is always required'], a:1,
+  why:`Termination is data-driven: the loop stops when an iteration adds nothing. Which means a cycle in the data — employee A manages B manages A — never terminates. Guard it with a depth counter, a visited-path array, or the engine's recursion cap.`},
+ {q:`You need "orders with no matching refund". <code>refunds.order_id</code> is nullable. Which is safest?`,
+  opts:[`NOT IN (SELECT order_id FROM refunds)`,`NOT EXISTS (SELECT 1 FROM refunds r WHERE r.order_id = o.id)`,`LEFT JOIN refunds r ON ... WHERE r.id IS NULL`,`Both B and C are correct`], a:3,
+  why:`NOT EXISTS and the LEFT-JOIN-IS-NULL anti-join pattern are both NULL-safe and typically get the same plan. NOT IN is the one that collapses to zero rows on a single NULL. Most engines optimise B and C identically; B states the intent more clearly.`},
+ {q:`A CTE is referenced five times in one query and takes 20 seconds to compute. What should you check first?`,
+  opts:['Whether your engine inlines CTEs — it may be computing it five times','Whether the CTE has an index','Whether UNION ALL is being used','Nothing — CTEs are always materialised once'], a:0,
+  why:`Behaviour varies by engine and version. If yours inlines, you are paying for it five times; the fix is a temp table or an explicitly materialised CTE. If yours materialises, you may instead be paying an optimisation fence — the planner cannot push your outer filters down into it.`},
+ {q:`Which of these is most likely to become an accidental N+1?`,
+  opts:['A derived table in FROM','A correlated scalar subquery in the SELECT list over a 50M-row table','A chain of three CTEs','A CROSS JOIN to a one-row aggregate'], a:1,
+  why:`A scalar subquery in the SELECT list is conceptually evaluated per output row. Planners often decorrelate it into a join, but when they cannot — a non-trivial expression, a volatile function, an unsupported shape — you get 50 million lookups. A LEFT JOIN to a pre-aggregated derived table is the deterministic version.`}
+]});
+/* ============================================================
+   TIER CONTENT — 05 to 09
+   ============================================================ */
+
+TIERS.push({
+n:'05', name:'Window functions', sub:'The real intermediate to advanced line',
+intro:`GROUP BY answers "what is the total per region" by destroying the rows. Window functions answer "what is this row's share of its region's total" by <b>keeping</b> them. Everything below is one idea — compute across a set of rows without collapsing them — plus one detail almost nobody learns: the frame.`,
+concepts:[
+ {t:'The anatomy of OVER',
+  b:`<code>PARTITION BY</code> is the grouping. <code>ORDER BY</code> inside OVER is the ordering <i>within</i> each partition and has nothing to do with the query's final ORDER BY. Omit PARTITION BY and the whole result is one partition. The number of output rows never changes.`,
+  sql:`SELECT order_id, region, amount,\n       SUM(amount)  OVER (PARTITION BY region)               AS region_total,\n       amount * 1.0 / SUM(amount) OVER (PARTITION BY region) AS share,\n       SUM(amount)  OVER (PARTITION BY region ORDER BY ts)   AS running\nFROM orders;`},
+ {t:'Ranking: four functions, one tie',
+  b:`They agree on distinct values and diverge the moment there is a tie — which is exactly when it matters. ROW_NUMBER is arbitrary among ties unless you add a deterministic tiebreaker.`,
+  demo:'ranking'},
+ {t:'Offsets: LAG, LEAD, FIRST_VALUE, LAST_VALUE',
+  b:`<code>LAG(x, 1, default)</code> reaches backwards within the partition, <code>LEAD</code> forwards. These are how you do period-over-period, deltas, and "time since previous event" without a self-join. <code>LAST_VALUE</code> has a notorious gotcha covered below.`,
+  sql:`SELECT day, revenue,\n       LAG(revenue) OVER (ORDER BY day)                     AS prev_day,\n       revenue - LAG(revenue) OVER (ORDER BY day)           AS delta,\n       LAG(revenue, 7) OVER (ORDER BY day)                  AS same_day_last_week\nFROM daily;`},
+ {t:'Frames — the part everyone skips',
+  b:`When you add <code>ORDER BY</code> inside OVER without a frame clause, the default frame is <code>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>. RANGE is defined by <b>values</b>, so all rows tied on the ORDER BY key enter the window together. ROWS is defined by <b>positions</b>. On data without ties they are identical — which is why this bug survives testing.`,
+  demo:'frames',
+  trap:`<code>LAST_VALUE(x) OVER (ORDER BY ts)</code> returns the current row, not the last row, because the default frame ends at CURRENT ROW. Fix it with an explicit <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>, or use <code>FIRST_VALUE</code> with the order reversed.`},
+ {t:'Filtering on a window result',
+  b:`Window functions run at stage 5.5 — after HAVING, before ORDER BY — so you cannot reference them in WHERE. Wrap the query and filter outside, or use <code>QUALIFY</code> where it exists (Snowflake, BigQuery, Databricks, Teradata).`,
+  sql:`-- portable\nSELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ts DESC) rn\n  FROM orders\n) t WHERE rn = 1;\n\n-- same thing, engines with QUALIFY\nSELECT * FROM orders\nQUALIFY ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ts DESC) = 1;`},
+ {t:'The pattern library',
+  b:`<b>Deduplicate</b>: ROW_NUMBER over the key, keep rn = 1. <b>Top-N per group</b>: same shape, keep rn ≤ N. <b>Gaps and islands</b>: subtract ROW_NUMBER from a sequence — consecutive runs share a constant difference, so you can group by it. <b>Sessionization</b>: flag a new session when LAG gap exceeds a threshold, then take a running SUM of the flag as the session id. <b>Percent of total</b>: divide by an unpartitioned SUM OVER ().`,
+  sql:`-- sessionization\nSELECT user_id, ts,\n  SUM(new_session) OVER (PARTITION BY user_id ORDER BY ts) AS session_id\nFROM (\n  SELECT user_id, ts,\n    CASE WHEN ts - LAG(ts) OVER (PARTITION BY user_id ORDER BY ts)\n              > interval '30 minutes' THEN 1 ELSE 0 END AS new_session\n  FROM events\n) t;`}
+],
+quiz:[
+ {q:`Scores in descending order: 95, 88, 88, 75, 75, 75, 60. What is <code>RANK()</code> for the row with score 60?`,
+  opts:['4','5','7','6'], a:2,
+  why:`RANK skips: the three rows tied at 75 occupy positions 4, 5 and 6, so the next rank is 7. DENSE_RANK would give 4. ROW_NUMBER would give 7 as well, but for a different reason — it never ties in the first place.`},
+ {q:`With <code>ORDER BY day</code> inside OVER and no explicit frame clause, what is the default frame?`,
+  opts:['ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW','RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW','The entire partition','ROWS BETWEEN 1 PRECEDING AND CURRENT ROW'], a:1,
+  why:`RANGE, not ROWS. With duplicate day values, all peers enter the window at once, so a "running total" jumps in steps and every tied row shows the same value. With no ORDER BY at all the default is the entire partition. Write <code>ROWS</code> explicitly whenever you mean physical rows.`},
+ {q:`<code>LAST_VALUE(price) OVER (PARTITION BY sku ORDER BY ts)</code> returns the current row's price on every row. Why?`,
+  opts:['LAST_VALUE is not supported with PARTITION BY','The default frame ends at CURRENT ROW, so the last row in frame is the current row','You need DISTINCT','ORDER BY must be DESC'], a:1,
+  why:`The frame, not the function, is the problem. Add <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code>, or reverse the order and use FIRST_VALUE. This is the single most reported "window functions are broken" bug, and it is always the frame.`},
+ {q:`You need the most recent order per customer, keeping all columns. Best approach?`,
+  opts:['GROUP BY customer_id with MAX(ts)','ROW_NUMBER over (PARTITION BY customer_id ORDER BY ts DESC), keep rn = 1','SELECT DISTINCT ON with ORDER BY','B, or C on Postgres'], a:3,
+  why:`GROUP BY gives you the max timestamp but not the rest of that row — joining back on (customer_id, ts) reintroduces duplicates whenever two orders share a timestamp. ROW_NUMBER is the portable answer; Postgres's <code>DISTINCT ON</code> is a concise equivalent. Add a unique tiebreaker to the ORDER BY either way.`}
+]});
+
+TIERS.push({
+n:'06', name:'Writing and modeling', sub:'From reader to owner',
+intro:`The shift from "I query this data" to "I am responsible for it". The failure mode changes shape: instead of one wrong report, you get a table that quietly accumulates duplicates for three weeks because a job was re-run.`,
+concepts:[
+ {t:'DML that references other tables',
+  b:`UPDATE and DELETE can read from elsewhere — <code>UPDATE … FROM</code> in Postgres and T-SQL, <code>DELETE … USING</code> in Postgres. If the source produces more than one match per target row, the result is engine-defined and effectively arbitrary. Aggregate the source to the target's grain first.`,
+  sql:`UPDATE orders o\nSET region = c.region\nFROM customers c\nWHERE c.id = o.customer_id;`},
+ {t:'Upserts: MERGE and ON CONFLICT',
+  b:`<code>INSERT … ON CONFLICT DO UPDATE</code> (Postgres/SQLite) and <code>MERGE</code> (standard, and now in most engines) both mean "insert if new, update if present". MERGE errors when one source row matches multiple target rows — which is a feature, because it catches a grain violation you would otherwise never see.`,
+  sql:`INSERT INTO dim_customer (id, name, updated_at)\nVALUES (:id, :name, now())\nON CONFLICT (id) DO UPDATE\n  SET name = EXCLUDED.name, updated_at = EXCLUDED.updated_at;`},
+ {t:'Constraints are the cheapest tests you will ever write',
+  b:`PRIMARY KEY and UNIQUE make duplicate grain impossible rather than unlikely. FOREIGN KEY makes orphans impossible. CHECK encodes domain rules. NOT NULL states that absence is not meaningful here. Every constraint you decline to declare becomes a data-quality test you write later, run less often, and trust less.`,
+  sql:`CREATE TABLE fact_order_lines (\n  order_id   bigint  NOT NULL REFERENCES orders(id),\n  line_no    int     NOT NULL,\n  sku        text    NOT NULL,\n  qty        int     NOT NULL CHECK (qty > 0),\n  PRIMARY KEY (order_id, line_no)   -- this IS the grain, declared\n);`},
+ {t:'Normalization, and when to stop',
+  b:`1NF: no repeating groups. 2NF: no partial dependency on part of a composite key. 3NF: no dependency between non-key columns. Transactional systems normalize because a fact stored once cannot disagree with itself. Analytical systems denormalize because the join cost outweighs the update anomaly risk on data that is written once and never edited.`},
+ {t:'Star schemas and grain',
+  b:`A fact table's grain is a declared sentence — one row per order line, per day, per store. Dimensions hang off it by surrogate key. Facts are additive (revenue), semi-additive (balance: sums across stores, not across time), or non-additive (ratios — store the numerator and denominator, not the ratio). Getting the grain wrong is not fixable downstream.`},
+ {t:'Slowly changing dimensions',
+  b:`<b>Type 1</b> overwrites — history is destroyed. <b>Type 2</b> versions the row with valid_from / valid_to / is_current — history is preserved and facts join as-of their own date. <b>Type 3</b> keeps a previous-value column — one step of history only. Type 2 is the default for anything anyone will ever ask "what did this look like at the time?" about.`,
+  demo:'scd2'},
+ {t:'Idempotency',
+  b:`A pipeline step must be safe to re-run. That means delete-then-insert scoped to the partition being rebuilt, or a MERGE keyed on the target's actual grain — never a bare INSERT. The test is simple: run it twice and compare row counts. Most pipelines fail this and nobody checks until a retry doubles a month of revenue.`,
+  sql:`BEGIN;\nDELETE FROM fact_daily WHERE day = :d;\nINSERT INTO fact_daily SELECT ... WHERE day = :d;\nCOMMIT;   -- re-runnable, atomic`}
+],
+quiz:[
+ {q:`Which backfill step is safe to re-run twice with no change in the result?`,
+  opts:[`INSERT INTO fact SELECT ... WHERE day = :d`,`DELETE FROM fact WHERE day = :d; INSERT INTO fact SELECT ... WHERE day = :d — in one transaction`,`INSERT ... ON CONFLICT DO NOTHING keyed on a non-unique column`,`TRUNCATE fact; INSERT INTO fact SELECT ...`], a:1,
+  why:`Delete-then-insert scoped to the partition, inside one transaction, is idempotent and atomic. A bare INSERT doubles the day. DO NOTHING only helps if the conflict target is genuinely unique. TRUNCATE is re-runnable but destroys every other partition — correct row count, catastrophic blast radius.`},
+ {q:`The business needs to know which city a customer lived in <b>at the time of each past order</b>. Which dimension design?`,
+  opts:['Type 1 — overwrite the city','Type 2 — version rows with valid_from / valid_to','Type 3 — add a previous_city column','Store city on the fact table only'], a:1,
+  why:`Type 1 destroys the answer. Type 3 gives you exactly one step of history, so a second move loses the first. Type 2 lets the fact join as-of its own order date. Storing city on the fact does work and is sometimes right, but it duplicates the attribute on every row and cannot answer questions about customers with no orders.`},
+ {q:`A <code>MERGE</code> fails with "the MERGE statement attempted to UPDATE or DELETE the same row more than once". What does that actually tell you?`,
+  opts:['The target table needs an index','Your source produces multiple rows per target key — a grain violation','MERGE is not supported for this table type','The transaction was too large'], a:1,
+  why:`It is a grain assertion firing. Your source is not unique on the merge key, so the correct target value is ambiguous. The fix is upstream — deduplicate or aggregate the source — not a hint or a retry. Engines that silently pick one row instead of erroring are doing you no favours.`},
+ {q:`Which is the strongest statement of a fact table's grain?`,
+  opts:['"It contains order data"','"One row per order line per day"','"It is joined to dim_customer and dim_product"','"It has about 4 billion rows"'], a:1,
+  why:`Grain is a sentence of the form "one row per ___". It determines which aggregates are valid, which joins fan out, and what the primary key must be. If nobody on the team can state it in one sentence, the table has no defined grain, and duplicate rows in it are undetectable.`}
+]});
+
+TIERS.push({
+n:'07', name:'Transactions and concurrency', sub:'Correctness when you are not alone',
+intro:`Single-user SQL is a solved problem. The interesting failures start when two sessions touch the same rows — and they are almost impossible to reproduce in testing, because they need a specific interleaving that only production traffic produces reliably.`,
+concepts:[
+ {t:'ACID, concretely',
+  b:`<b>Atomicity</b>: all statements in the transaction or none. <b>Consistency</b>: constraints hold at commit. <b>Isolation</b>: how much concurrent transactions can see of each other — the only one with a dial. <b>Durability</b>: committed means survives a crash.`},
+ {t:'The anomalies, in order of nastiness',
+  b:`<b>Dirty read</b>: seeing uncommitted data. <b>Non-repeatable read</b>: the same row read twice in one transaction gives different values. <b>Phantom read</b>: the same range query returns different <i>rows</i>. <b>Lost update</b>: two read-modify-write cycles interleave and one is silently discarded. <b>Write skew</b>: two transactions each read a state and write a different row, and the combination violates an invariant neither broke alone.`},
+ {t:'Isolation levels and the dial',
+  b:`READ COMMITTED takes a fresh snapshot per statement — no dirty reads, but non-repeatable reads and phantoms are allowed. REPEATABLE READ pins the snapshot for the whole transaction. SERIALIZABLE guarantees the outcome equals <i>some</i> serial order — which is the only level that prevents write skew. Higher levels do not lock more in MVCC engines; they abort more, and your application must retry.`,
+  demo:'isolation'},
+ {t:'Lost updates are not an isolation problem',
+  b:`Read-modify-write in application code is unsafe at READ COMMITTED and REPEATABLE READ alike. Three fixes: make the update self-referential so the engine does the arithmetic; take an explicit lock with <code>SELECT … FOR UPDATE</code>; or use optimistic concurrency with a version column and check the affected row count.`,
+  sql:`-- unsafe: two sessions both read 100, one deduction is lost\nSELECT balance FROM accounts WHERE id = 1;   -- app computes 100 - 30\nUPDATE accounts SET balance = 70 WHERE id = 1;\n\n-- safe: the engine reads and writes atomically\nUPDATE accounts SET balance = balance - 30 WHERE id = 1;\n\n-- safe: optimistic, check rows affected = 1\nUPDATE accounts SET balance = 70, version = version + 1\nWHERE id = 1 AND version = :seen_version;`},
+ {t:'Locks, deadlocks, and ordering',
+  b:`Deadlock is two transactions each holding what the other needs. The engine detects the cycle and kills one — so deadlocks are a correctness-preserving performance problem, not corruption. The prevention is boring and effective: always acquire locks in a consistent order, keep transactions short, and do not hold locks across network calls or user think time.`},
+ {t:'MVCC and the cost of a long transaction',
+  b:`Readers do not block writers because old row versions are kept alive for whoever still needs them. The bill arrives as bloat: an analyst's transaction left open for two hours prevents vacuum or garbage collection from reclaiming anything newer, tables grow, and plans degrade. In analytics environments this is the most common self-inflicted database wound.`}
+],
+quiz:[
+ {q:`At READ COMMITTED, a transaction runs the same SELECT twice with another session committing an UPDATE in between. What does it see?`,
+  opts:['The same value both times','A different value the second time — a non-repeatable read','An error','Uncommitted data from the other session'], a:1,
+  why:`READ COMMITTED takes a new snapshot per statement, so it sees the newly committed value. It never sees uncommitted data — dirty reads are not permitted at any of the levels in common use. REPEATABLE READ would return the original value both times.`},
+ {q:`What is the most reliable way to prevent deadlocks between two jobs that update the same set of tables?`,
+  opts:['Raise the isolation level to SERIALIZABLE','Always acquire locks on rows and tables in the same order in both jobs','Add more indexes','Use NOLOCK / READ UNCOMMITTED'], a:1,
+  why:`Deadlock requires a cycle in the wait-for graph, and consistent lock ordering makes a cycle impossible. Raising isolation increases aborts rather than preventing cycles. READ UNCOMMITTED trades a performance problem for a correctness one.`},
+ {q:`Two sessions each read a balance of 100, one subtracts 30, the other subtracts 50, both commit. Final balance is 50. Which fix actually solves it?`,
+  opts:['Switch to REPEATABLE READ','Wrap both in a transaction','Use SET balance = balance - 30, or SELECT ... FOR UPDATE, or a version check','Add an index on the id column'], a:2,
+  why:`It is already in a transaction, and REPEATABLE READ does not help a read-modify-write done in application code — Postgres would abort the second writer, but MySQL would not. Let the engine do the arithmetic atomically, or take a real lock, or detect the conflict with an optimistic version check.`},
+ {q:`An analyst opens a session, runs a query, and leaves the transaction open for three hours. On an MVCC engine, what is the cost?`,
+  opts:['Nothing — readers do not block writers','Old row versions cannot be reclaimed, so tables bloat and plans degrade','All writes to those tables are blocked','The transaction is automatically rolled back'], a:1,
+  why:`Readers not blocking writers is exactly what creates the cost: the engine must retain every row version that the open snapshot might still need. Vacuum or garbage collection stalls, dead tuples accumulate, and query plans degrade across the whole database — not just the tables that session touched.`}
+]});
+
+TIERS.push({
+n:'08', name:'Performance', sub:'Cost, not just correctness',
+intro:`Up to here, the question was "is this answer right?". Now it is "what did that answer cost, and why?". The discipline is narrow: read the plan, find the first line where the estimated row count diverges from the actual, and fix the cause of the divergence rather than the symptom.`,
+concepts:[
+ {t:'Read the plan, not the query',
+  b:`<code>EXPLAIN</code> shows the plan; <code>EXPLAIN ANALYZE</code> runs it and shows actual rows and timings. Compare <b>estimated vs actual</b> at every node. The first node where they diverge by an order of magnitude is your bug — every choice above it was made on bad information. Also watch for <code>loops=</code>: a node taking 0.2 ms but running 40,000 times is your 8 seconds.`,
+  sql:`EXPLAIN (ANALYZE, BUFFERS)\nSELECT ... ;\n-- Seq Scan on events (cost=... rows=1200 width=48)\n--                    (actual time=... rows=980000 loops=1)\n--                              ^ estimate off by 800x`},
+ {t:'Index anatomy',
+  b:`A B-tree index is a sorted structure supporting equality, range, prefix matching, and ordered retrieval. A <b>composite</b> index on (a, b, c) can serve predicates on a, on (a, b), and on (a, b, c) — the <b>leftmost prefix</b> rule — but not on b alone. A <b>covering</b> index includes extra columns so the query never touches the table. A <b>partial</b> index covers only rows matching a condition, which is dramatically smaller when queries always filter the same way.`,
+  sql:`CREATE INDEX ON orders (customer_id, created_at);       -- serves customer_id, and (customer_id, created_at)\nCREATE INDEX ON orders (status) WHERE status = 'open';  -- partial: tiny\nCREATE INDEX ON orders (customer_id) INCLUDE (amount);  -- covering`},
+ {t:'Sargability',
+  b:`A predicate is sargable if the engine can use it to seek an index. Wrapping the indexed column in a function, casting it, or putting it on the wrong side of arithmetic all destroy sargability. The rewrite is almost always to move the transformation to the <i>constant</i> side, or to express the predicate as a range.`,
+  demo:'scan_seek'},
+ {t:'Join algorithms and why the planner picks one',
+  b:`<b>Nested loop</b>: cheap when the outer side is small and the inner side has an index — cost scales with outer rows. <b>Hash join</b>: builds a hash of the smaller side, streams the larger; best for big equi-joins, needs memory. <b>Merge join</b>: both inputs sorted, single pass; good when sort order already exists. A hash join that spills to disk, or a nested loop chosen because the planner thought the outer side had 10 rows and it had a million, is the most common catastrophic misestimate.`},
+ {t:'Statistics, skew and correlation',
+  b:`The planner estimates from column statistics. It goes wrong on <b>skew</b> (99% of rows share one value), on <b>correlated predicates</b> (city and postcode are not independent, but the planner multiplies their selectivities), and on <b>stale stats</b> after a bulk load. Fixes: refresh statistics, raise the histogram target on skewed columns, declare extended statistics on correlated column groups.`},
+ {t:'Partitioning, clustering, columnar',
+  b:`Partitioning splits a table by key so the planner can <b>prune</b> entire partitions — worthless unless queries filter on the partition key. Clustering or sort keys physically co-locate related rows so scans read fewer blocks. Columnar storage reads only the columns you name, which is why <code>SELECT *</code> is far more expensive on a warehouse than on Postgres, and why projection and predicate pushdown into Parquet dominate query cost in a lakehouse.`},
+ {t:'Distributed engines: shuffle and spill',
+  b:`In an MPP engine the dominant cost is usually moving data between nodes. A join on the distribution key is local; a join on anything else forces a <b>shuffle</b>. Small tables get <b>broadcast</b> to every node instead. Aggregating before joining reduces both. A <b>spill</b> — hash table exceeding memory and going to disk — is the warehouse equivalent of a page fault storm.`},
+ {t:'Rewrites that reliably work',
+  b:`Pre-aggregate before joining. Replace a DISTINCT-over-join with EXISTS. Split <code>OR</code> across different columns into <code>UNION ALL</code> so each branch can use its own index. Replace deep OFFSET with keyset pagination. Push filters as early as the semantics allow. Name your columns instead of <code>SELECT *</code>.`}
+],
+quiz:[
+ {q:`You have an index on <code>(customer_id, created_at)</code>. Which query can use it for a seek?`,
+  opts:[`WHERE created_at > '2024-01-01'`,`WHERE customer_id = 42`,`WHERE created_at > '2024-01-01' AND status = 'open'`,`All three`], a:1,
+  why:`The leftmost prefix rule: the index is sorted by customer_id first, so a predicate on created_at alone cannot seek it — the matching entries are scattered across the whole index. It would need its own index, or a reordered composite. This is why index column order is a design decision, not a formatting one.`},
+ {q:`Which predicate can use an index on <code>created_at</code>?`,
+  opts:[`WHERE date_trunc('day', created_at) = DATE '2024-05-01'`,`WHERE created_at::date = DATE '2024-05-01'`,`WHERE created_at &gt;= '2024-05-01' AND created_at &lt; '2024-05-02'`,`WHERE EXTRACT(year FROM created_at) = 2024`], a:2,
+  why:`The index stores raw <code>created_at</code> values, so any expression wrapping the column forces the engine to compute it per row — a full scan. The half-open range is both correct and sargable. If you truly need the function form, an expression index on <code>date_trunc('day', created_at)</code> makes it seekable.`},
+ {q:`In EXPLAIN ANALYZE output, a node shows <code>rows=1200</code> estimated and <code>rows=980000</code> actual. What does that tell you?`,
+  opts:['The query returned too many rows','Every plan decision above this node was made on bad information','The index is fragmented','The node ran 980000 times'], a:1,
+  why:`The planner chose join algorithms, memory allocations and access paths on the assumption of 1,200 rows. An 800x underestimate typically converts a reasonable nested loop into a million index lookups. Fix the estimate — stale statistics, skew, correlated predicates, an opaque expression the planner cannot see through — rather than hinting around it.`},
+ {q:`Why does adding <code>LIMIT 10</code> to a query with GROUP BY and ORDER BY often not make it faster?`,
+  opts:['LIMIT is ignored when GROUP BY is present','LIMIT applies last: every row must still be read, grouped and sorted first','The optimiser needs a hint to push LIMIT down','It does — LIMIT always helps'], a:1,
+  why:`LIMIT is stage 8. You cannot know the top 10 groups until every group exists and has been sorted. LIMIT only helps when the plan can stop early — typically an index that already provides the required order with no blocking aggregation above it.`}
+]});
+
+TIERS.push({
+n:'09', name:'Production SQL', sub:'The parts courses skip',
+intro:`Everything that separates a query that works from a query other people depend on. This tier has the least theory and the most consequences: security, testing, incremental correctness, and the dialect differences that ambush you the first time you port something.`,
+concepts:[
+ {t:'Dialects: know what is not portable',
+  b:`String concatenation, date arithmetic, row limiting (<code>LIMIT</code> vs <code>TOP</code> vs <code>FETCH FIRST</code>), <code>QUALIFY</code>, arrays, upsert syntax, and identifier quoting all differ. Write ANSI where it costs nothing and use the engine's idioms where they are genuinely better — but know which you are using, and never let a query claim to be portable when it is not.`,
+  sql:`-- Postgres        -- T-SQL            -- BigQuery\na || b              CONCAT(a, b)         CONCAT(a, b)\nLIMIT 10            TOP 10               LIMIT 10\nnow() - interval '1 day'\n                    DATEADD(day,-1,GETDATE())\n                                         TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)`},
+ {t:'Semi-structured data',
+  b:`JSON columns are queried with path operators and can be indexed (GIN in Postgres) if you know the access pattern. Arrays are flattened with <code>UNNEST</code> (Postgres, BigQuery), <code>FLATTEN</code> (Snowflake), or <code>LATERAL VIEW EXPLODE</code> (Spark) — and flattening multiplies rows exactly like a one-to-many join.`,
+  demo:'unnest'},
+ {t:'Dynamic SQL and injection',
+  b:`Parameters are the only safe way to pass <b>values</b>. Identifiers — table and column names — cannot be parameterised, so building them from user input requires an explicit allowlist, never escaping. String-concatenated SQL in a reporting tool or a stored procedure is the same vulnerability as in a web app, with better access.`,
+  sql:`-- unsafe\nquery = "SELECT * FROM t WHERE name = '" + user_input + "'"\n\n-- safe: value is a parameter, never parsed as SQL\nSELECT * FROM t WHERE name = :name\n\n-- identifiers: allowlist only\nif sort_col not in {'created_at','amount'}: reject`},
+ {t:'Security inside the database',
+  b:`Grant on roles, not on users. Row-level security policies attach the predicate to the table so it cannot be forgotten by a query author. Column masking handles the "analysts can aggregate salaries but not read them" case. Views as a security boundary only work if the underlying tables are not also granted.`,
+  sql:`CREATE POLICY region_isolation ON orders\n  USING (region = current_setting('app.region'));`},
+ {t:'Testing SQL',
+  b:`Four tests catch most production data bugs: <b>uniqueness on the declared grain</b> (catches fan-out and double-loads), <b>not-null on keys</b>, <b>referential integrity</b> (catches orphans from out-of-order loads), and <b>row-count delta bounds</b> (catches a source that silently returned nothing). Add reconciliation against the source system for anything financial.`,
+  sql:`-- the single highest-value test you can write\nSELECT order_id, day, COUNT(*)\nFROM fact_daily\nGROUP BY order_id, day\nHAVING COUNT(*) > 1;   -- must return zero rows`},
+ {t:'Incremental models and late data',
+  b:`Processing only new rows is how you keep cost flat as history grows. The hard part is data that arrives late or gets corrected after its window closed. Standard answers: a <b>lookback window</b> that reprocesses the last N days every run, a <b>watermark</b> on an ingestion timestamp rather than the event timestamp, and full periodic rebuilds to catch whatever both miss.`},
+ {t:'Cost governance',
+  b:`On consumption-priced warehouses the query is a purchase order. Scan bytes, not rows, are what you pay for — which makes partition pruning, column pruning and materialised aggregates financial decisions. A dashboard that refreshes every five minutes on a full-table scan is a standing charge nobody approved.`}
+],
+quiz:[
+ {q:`Which is safe against SQL injection?`,
+  opts:[`Escaping quotes in the user input before concatenating`,`Passing the value as a bound parameter`,`Wrapping the input in double quotes`,`Validating that the input is under 50 characters`], a:1,
+  why:`A bound parameter is never parsed as SQL — the value cannot become syntax, whatever it contains. Escaping is a defence that must be perfect every time against every encoding and character set. Note that parameters cover values only: dynamic table or column names need an allowlist.`},
+ {q:`Which single test most reliably catches an accidental fan-out or a double-loaded partition?`,
+  opts:['NOT NULL on the primary key','Uniqueness on the declared grain','Row count greater than zero','Referential integrity to the dimension'], a:1,
+  why:`Fan-out and re-runs both express themselves as more than one row per grain key. A GROUP BY on the grain with <code>HAVING COUNT(*) &gt; 1</code> catches both, and costs one query. Better still, declare it as a unique constraint so the load fails instead of succeeding wrongly.`},
+ {q:`Your incremental model filters on <code>event_time >= last_run</code>. Events sometimes arrive two days late. What breaks, and what fixes it?`,
+  opts:['Nothing breaks','Late events are permanently missed; a lookback window or an ingestion-time watermark fixes it','The model runs twice as long; add an index','Duplicates appear; add DISTINCT'], a:1,
+  why:`An event with a timestamp before the watermark never enters any future window, so it is lost silently and forever. Reprocess a trailing window each run (idempotently), or watermark on ingestion time — when you received it — rather than event time, since ingestion time is monotonic and event time is not.`},
+ {q:`A table has 10,000 orders, each with an average of 3 tags in an array column. How many rows does <code>SELECT ... FROM orders, UNNEST(tags)</code> return?`,
+  opts:['10,000','About 30,000','3','It depends on the index'], a:1,
+  why:`Roughly 30,000 — one row per order per tag. UNNEST is a one-to-many join wearing different clothing, so every aggregate over order-level columns is now inflated by the tag count. Orders with an empty array disappear entirely unless you use a LEFT JOIN LATERAL.`}
+]});
+/* ============================================================
+   RENDER TIERS + QUIZ ENGINE
+   ============================================================ */
+const tiersEl = document.getElementById('tiers');
+const navEl   = document.getElementById('nav');
+let totalQ = 0, solved = 0;
+
+TIERS.forEach(t => totalQ += t.quiz.length);
+
+function updateScore(){
+  const el = document.getElementById('scorebox');
+  if (el) el.innerHTML = 'solved <b>'+solved+'</b> / '+totalQ;
+}
+
+TIERS.forEach((t, ti) => {
+  const a = document.createElement('button');
+  a.type = 'button'; a.textContent = t.n; a.title = t.name;
+  a.onclick = ev => {
+    ev.preventDefault();
+    const s = document.getElementById('t'+t.n);
+    s.dataset.open = 'true';
+    s.querySelector('.tier-btn').setAttribute('aria-expanded','true');
+    mountDemos(s);
+    s.scrollIntoView({behavior:'smooth', block:'start'});
+  };
+  navEl.appendChild(a);
+
+  const sec = document.createElement('section');
+  sec.className='tier'; sec.id='t'+t.n; sec.dataset.open = ti===0 ? 'true':'false';
+
+  let body = '<p class="tier-intro">'+t.intro+'</p>';
+  t.concepts.forEach((c,ci) => {
+    body += '<div class="concept"><div class="c-mark">'+t.n+'.'+String(ci+1).padStart(2,'0')+'</div><div class="c-body">'
+      + '<p class="c-title">'+esc(c.t)+'</p><p class="c-text">'+c.b+'</p>'
+      + (c.sql ? code(c.sql) : '')
+      + (c.trap ? '<div class="trap"><span class="lbl">trap</span><p>'+c.trap+'</p></div>' : '')
+      + (c.demo ? '<div class="demo" data-demo="'+c.demo+'"></div>' : '')
+      + '</div></div>';
+  });
+
+  body += '<div class="quiz"><p class="quiz-h">Problems · tier '+t.n+'</p>';
+  t.quiz.forEach((q,qi) => {
+    body += '<div class="q" data-t="'+ti+'" data-q="'+qi+'">'
+      + '<p class="q-num">'+t.n+' · problem '+(qi+1)+'</p>'
+      + '<p class="q-text">'+q.q+'</p>'
+      + (q.sql ? code(q.sql) : '')
+      + '<div class="opts">'
+      + q.opts.map((o,oi)=>'<button class="opt" data-o="'+oi+'"><span class="tick">'+String.fromCharCode(65+oi)+'</span><span>'+o+'</span></button>').join('')
+      + '</div><p class="why"></p></div>';
+  });
+  body += '</div>';
+
+  sec.innerHTML =
+    '<button class="tier-btn" type="button" aria-expanded="'+(ti===0)+'">'
+    + '<span class="tier-num">'+t.n+'</span><span class="tier-name">'+esc(t.name)+'</span>'
+    + '<span class="tier-sub">'+esc(t.sub)+'</span><span class="chev">&#8250;</span></button>'
+    + '<div class="tier-body">'+body+'</div>';
+
+  const btn = sec.querySelector('.tier-btn');
+  btn.onclick = () => {
+    const open = sec.dataset.open === 'true';
+    sec.dataset.open = open ? 'false':'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    if (!open) mountDemos(sec);
+  };
+  tiersEl.appendChild(sec);
+});
+
+/* score readout in the nav */
+const sb = document.createElement('span');
+sb.className='score'; sb.id='scorebox';
+navEl.appendChild(sb); updateScore();
+
+/* lazy-mount demos only when a tier is first opened */
+function mountDemos(sec){
+  sec.querySelectorAll('[data-demo]').forEach(host => {
+    if (host.dataset.mounted) return;
+    const d = DEMOS[host.dataset.demo];
+    if (!d) return;
+    host.dataset.mounted = '1';
+    try { d.build(host); }
+    catch(e){ host.innerHTML = '<div class="demo-out">This demo failed to load.</div>'; }
+  });
+}
+
+/* quiz grading — first attempt counts */
+tiersEl.addEventListener('click', ev => {
+  const opt = ev.target.closest('.opt');
+  if (!opt) return;
+  const qEl = opt.closest('.q');
+  if (qEl.dataset.done) return;
+  const t = TIERS[+qEl.dataset.t], q = t.quiz[+qEl.dataset.q];
+  const picked = +opt.dataset.o;
+  qEl.dataset.done = '1';
+  qEl.querySelectorAll('.opt').forEach((b,i)=>{
+    b.classList.add('locked');
+    if (i === q.a) b.classList.add('right');
+    else if (i === picked) b.classList.add('wrong');
+    b.querySelector('.tick').textContent = i===q.a ? '✓' : (i===picked ? '✕' : String.fromCharCode(65+i));
+  });
+  const why = qEl.querySelector('.why');
+  why.innerHTML = (picked===q.a ? '<b>Correct.</b> ' : '<b>Not quite.</b> ') + q.why;
+  why.classList.add('show');
+  if (picked === q.a){ solved++; updateScore(); }
+});
+
+/* first tier is open by default — mount its demos now */
+mountDemos(document.getElementById('t00'));
+</script>
+</body>
+</html>

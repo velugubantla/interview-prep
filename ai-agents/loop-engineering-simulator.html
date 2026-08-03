@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loop engineering — interactive simulator</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b23; --panel2:#1c232e; --line:#2a3442;
+    --ink:#e8ecf2; --ink2:#9aa7b8; --ink3:#5f6c7d;
+    --sig:#4fd1a5; --sig-dim:#1d4a3c; --warn:#f0a35e; --fail:#e5636e; --acc:#6ea8f7;
+    --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --sans:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;padding:40px 20px 80px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:15px;margin:6px 0 32px;max-width:640px}
+  .kbd{font-family:var(--mono);font-size:13px;color:var(--sig);background:var(--panel);padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+
+  /* ── Loop ring ── */
+  .ringbox{display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:28px}
+  .ring{flex:0 0 320px;position:relative}
+  .ring svg{display:block;width:100%;height:auto}
+  .stage-label{font-family:var(--mono);font-size:12px;fill:var(--ink2);transition:fill .3s}
+  .stage-label.on{fill:var(--ink);font-weight:500}
+  .stagecircle{fill:var(--panel);stroke:var(--line);stroke-width:1.5;transition:fill .3s,stroke .3s;transform-box:fill-box;transform-origin:center}
+  .stagecircle.on{fill:var(--sig-dim);stroke:var(--sig);animation:pulse 1.4s ease-in-out infinite}
+  .stagecircle.failed{fill:#3d2226;stroke:var(--fail);animation:shake .4s ease-in-out 1}
+  .stagecircle.passed{fill:var(--sig-dim);stroke:var(--sig);animation:pop .5s ease-out 1}
+  .halo{fill:none;stroke:var(--sig);stroke-width:1;opacity:0;transform-box:fill-box;transform-origin:center}
+  .halo.on{animation:ripple 1.4s ease-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  @keyframes ripple{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.55);opacity:0}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .track{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 6;animation:march 12s linear infinite}
+  .track.fast{animation-duration:2.5s;stroke:var(--sig);opacity:.5}
+  @keyframes march{to{stroke-dashoffset:-100}}
+  .runner{fill:var(--sig);filter:drop-shadow(0 0 6px var(--sig))}
+  .runner-trail{fill:var(--sig);opacity:.35}
+  #fbarc{fill:none;stroke:var(--fail);stroke-width:2;stroke-linecap:round;stroke-dasharray:300;stroke-dashoffset:300;opacity:0}
+  #fbarc.draw{animation:drawarc 1s ease-out forwards}
+  @keyframes drawarc{0%{stroke-dashoffset:300;opacity:1}80%{opacity:1}100%{stroke-dashoffset:0;opacity:1}}
+  #fbarc.fade{animation:fadearc .6s ease-out forwards}
+  @keyframes fadearc{to{opacity:0}}
+  #fblabel{font-family:var(--mono);font-size:10px;fill:var(--fail);opacity:0;transition:opacity .4s}
+  #fblabel.on{opacity:1}
+  #donering{fill:none;stroke:var(--sig);stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center}
+  #donering.win{animation:winring 1.2s ease-out 3}
+  @keyframes winring{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+
+  .side{flex:1;min-width:260px}
+  .side h2{font-size:15px;font-weight:600;margin-bottom:8px}
+  .side p{font-size:14px;color:var(--ink2);margin-bottom:14px}
+  #phase-note{border-left:2px solid var(--sig);padding:8px 14px;background:var(--panel);border-radius:0 8px 8px 0;font-size:14px;min-height:76px;color:var(--ink);transition:border-color .3s}
+  #phase-note.bad{border-color:var(--fail)}
+
+  /* ── Meters ── */
+  .meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .meter{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;transition:border-color .3s}
+  .meter.hot{border-color:var(--warn)}
+  .meter .lbl{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3)}
+  .meter .val{font-size:24px;font-weight:600;margin-top:2px}
+  .meter .val.tick{animation:tickup .35s ease-out 1}
+  @keyframes tickup{0%{transform:translateY(6px);opacity:.3}100%{transform:translateY(0);opacity:1}}
+  .meter .cap{font-size:12px;color:var(--ink3)}
+  .bar{height:4px;background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden}
+  .bar>div{height:100%;width:0%;background:var(--acc);transition:width .6s cubic-bezier(.4,0,.2,1),background .4s}
+  #term-val{font-size:16px;margin-top:6px;color:var(--ink3)}
+  #term-val.ok{color:var(--sig)} #term-val.tripped{color:var(--fail)}
+  #term-val.blink{animation:blink 1s step-end 3}
+  @keyframes blink{50%{opacity:.2}}
+
+  /* ── Trace ── */
+  .trace{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:24px}
+  .trace .hd{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:10px;display:flex;justify-content:space-between}
+  #cursor{display:inline-block;width:7px;height:14px;background:var(--sig);vertical-align:-2px;animation:blink 1s step-end infinite}
+  #log{font-family:var(--mono);font-size:13px;line-height:2;min-height:150px;max-height:320px;overflow-y:auto}
+  #log .fail{color:var(--fail)} #log .pass{color:var(--sig)} #log .dim{color:var(--ink3)} #log .warn{color:var(--warn)}
+  #log div{opacity:0;transform:translateX(-8px);animation:slidein .35s ease-out forwards}
+  @keyframes slidein{to{opacity:1;transform:translateX(0)}}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    #log div{opacity:1;transform:none}
+  }
+
+  /* ── Controls ── */
+  .ctrl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:40px}
+  button{font-family:var(--sans);font-size:14px;font-weight:500;padding:9px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;transition:all .15s}
+  button:hover{border-color:var(--sig);color:var(--sig)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--sig);border-color:var(--sig);color:#0b1512}
+  button.primary:hover{filter:brightness(1.1);color:#0b1512}
+  select{font-family:var(--mono);font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  label.sl{font-size:13px;color:var(--ink2);display:flex;gap:8px;align-items:center}
+  input[type=range]{accent-color:var(--sig)}
+
+  /* ── Concept cards ── */
+  .concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .concept{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;transition:transform .2s,border-color .2s}
+  .concept:hover{transform:translateY(-3px);border-color:var(--sig)}
+  .concept .num{font-family:var(--mono);font-size:11px;color:var(--sig);letter-spacing:.08em}
+  .concept h3{font-size:15px;font-weight:600;margin:4px 0 6px}
+  .concept p{font-size:13px;color:var(--ink2)}
+  .stack{margin:36px 0 8px;font-family:var(--mono);font-size:13px;color:var(--ink2)}
+  .stack b{color:var(--sig);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a href="../index.html" style="display:inline-block;margin:0 0 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-2,var(--ink2,#8A9099));text-decoration:none">&larr; Interview Prep home</a>
+  <h1>Loop engineering, running live</h1>
+  <p class="sub">You're not designing prompts here — you're designing the <span class="kbd">while</span> loop around the model: how it acts, observes, verifies, recovers, and knows when to stop. Pick a scenario and run it.</p>
+
+  <div class="ringbox">
+    <div class="ring">
+      <svg viewBox="0 0 320 320" role="img" aria-label="Agent loop: reason, act, observe, verify, with done as exit">
+        <circle id="track" class="track" cx="160" cy="150" r="95"/>
+        <path id="fbarc" d="M 78 100 A 95 95 0 0 1 242 100"/>
+        <text id="fblabel" x="160" y="20" text-anchor="middle">failure → back into context</text>
+        <circle id="trail1" class="runner-trail" r="3" cx="160" cy="55" style="opacity:0"/>
+        <circle id="trail2" class="runner-trail" r="2" cx="160" cy="55" style="opacity:0"/>
+        <circle id="runner" class="runner" r="5" cx="160" cy="55" style="opacity:0"/>
+        <circle id="donering" cx="160" cy="150" r="28"/>
+        <g id="c-reason"><circle class="halo" cx="160" cy="55" r="30"/><circle class="stagecircle" cx="160" cy="55" r="30"/><text class="stage-label" x="160" y="59" text-anchor="middle">reason</text></g>
+        <g id="c-act"><circle class="halo" cx="255" cy="150" r="30"/><circle class="stagecircle" cx="255" cy="150" r="30"/><text class="stage-label" x="255" y="154" text-anchor="middle">act</text></g>
+        <g id="c-observe"><circle class="halo" cx="160" cy="245" r="30"/><circle class="stagecircle" cx="160" cy="245" r="30"/><text class="stage-label" x="160" y="249" text-anchor="middle">observe</text></g>
+        <g id="c-verify"><circle class="halo" cx="65" cy="150" r="30"/><circle class="stagecircle" cx="65" cy="150" r="30"/><text class="stage-label" x="65" y="154" text-anchor="middle">verify</text></g>
+        <g id="c-done"><circle class="halo" cx="160" cy="150" r="26"/><circle class="stagecircle" cx="160" cy="150" r="26"/><text class="stage-label" x="160" y="154" text-anchor="middle">done</text></g>
+      </svg>
+    </div>
+    <div class="side">
+      <h2>The return edge is the whole idea</h2>
+      <p>Prompt engineering ends at the first answer. Loop engineering feeds the <em>result of the action</em> — test output, errors, API responses — back into the model's context and goes around again.</p>
+      <div id="phase-note">Press <b>Run loop</b>. Watch what happens when verify fails: the failure doesn't end the run — it becomes input.</div>
+    </div>
+  </div>
+
+  <div class="meters">
+    <div class="meter"><div class="lbl">Iteration</div><div class="val"><span id="iter">0</span> <span class="cap">/ <span id="itermax">5</span> max</span></div></div>
+    <div class="meter" id="budg-meter"><div class="lbl">Token budget</div><div class="val"><span id="budg">0</span>k <span class="cap">/ 60k</span></div><div class="bar"><div id="budgbar"></div></div></div>
+    <div class="meter"><div class="lbl">Termination</div><div id="term-val">idle</div></div>
+  </div>
+
+  <div class="trace">
+    <div class="hd"><span id="goal-line">goal: make test_auth.py pass</span><span>agent trace</span></div>
+    <div id="log"></div><span id="cursor"></span>
+  </div>
+
+  <div class="ctrl">
+    <button id="runbtn" class="primary" onclick="runLoop()">Run loop</button>
+    <button onclick="resetLoop()">Reset</button>
+    <select id="scenario" onchange="resetLoop()">
+      <option value="happy">Scenario: converges (3 iterations)</option>
+      <option value="breaker">Scenario: circuit breaker trips</option>
+      <option value="false">Scenario: agent self-declares done (no verify)</option>
+    </select>
+    <label class="sl">speed <input type="range" id="spd" min="1" max="3" step="1" value="2"></label>
+  </div>
+
+  <div class="stack">prompt engineering → context engineering → harness engineering → <b>loop engineering</b></div>
+  <p class="sub" style="margin-bottom:20px">Each layer wraps the previous. The loop layer decides how the system observes, verifies, and recovers — the parts that only matter once things go wrong mid-execution.</p>
+
+  <div class="concepts">
+    <div class="concept"><div class="num">01 · VERIFY</div><h3>External validation</h3><p>Success is decided by tests, compilers, or checks outside the agent — never by the agent's own judgment. Run the third scenario to see why.</p></div>
+    <div class="concept"><div class="num">02 · TERMINATE</div><h3>Stopping conditions</h3><p>Goal met, max iterations, or budget ceiling — whichever comes first. A loop without a stop condition is an incident, not an agent.</p></div>
+    <div class="concept"><div class="num">03 · RECOVER</div><h3>Failure as input</h3><p>Error traces and diffs flow back into context so each iteration is smarter than the last. Recovery paths are where the engineering effort actually goes.</p></div>
+    <div class="concept"><div class="num">04 · GOVERN</div><h3>Budgets and breakers</h3><p>Token ceilings, run logs, drift detection. This is what a bank audits — and where most enterprise loops are weakest.</p></div>
+  </div>
+</div>
+
+<script>
+const CX=160,CY=150,R=95;
+const angles={reason:-90,act:0,observe:90,verify:180};
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let running=false,iter=0,budg=0,runnerAngle=-90;
+const $=id=>document.getElementById(id);
+
+function ptAt(a){const r=a*Math.PI/180;return[CX+R*Math.cos(r),CY+R*Math.sin(r)];}
+
+function travelTo(stage){
+  return new Promise(res=>{
+    const target=angles[stage];
+    if(reduceMotion){runnerAngle=target;placeRunner(target);return res();}
+    let from=runnerAngle;
+    let delta=target-from;
+    while(delta<=0)delta+=360;
+    const dur=550;const t0=performance.now();
+    $('runner').style.opacity=1;$('trail1').style.opacity=.35;$('trail2').style.opacity=.2;
+    $('track').classList.add('fast');
+    function frame(t){
+      const p=Math.min(1,(t-t0)/dur);
+      const e=1-Math.pow(1-p,3);
+      const a=from+delta*e;
+      placeRunner(a);
+      placeTrail('trail1',a-8);placeTrail('trail2',a-16);
+      if(p<1)requestAnimationFrame(frame);
+      else{runnerAngle=((target%360)+360)%360;if(runnerAngle>180)runnerAngle-=360;$('track').classList.remove('fast');res();}
+    }
+    requestAnimationFrame(frame);
+  });
+}
+function placeRunner(a){const[x,y]=ptAt(a);$('runner').setAttribute('cx',x);$('runner').setAttribute('cy',y);}
+function placeTrail(id,a){const[x,y]=ptAt(a);$(id).setAttribute('cx',x);$(id).setAttribute('cy',y);}
+
+function mark(stage,cls){
+  document.querySelectorAll('.stagecircle').forEach(c=>c.classList.remove('on','failed','passed'));
+  document.querySelectorAll('.stage-label').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.halo').forEach(h=>h.classList.remove('on'));
+  if(!stage)return;
+  const g=$('c-'+stage);
+  g.querySelector('.stagecircle').classList.add(cls||'on');
+  g.querySelector('.stage-label').classList.add('on');
+  if(!cls)g.querySelector('.halo').classList.add('on');
+}
+async function goStage(stage,cls){
+  if(stage!=='done')await travelTo(stage);
+  mark(stage,cls);
+}
+function feedbackArc(show){
+  const arc=$('fbarc');
+  arc.classList.remove('draw','fade');
+  void arc.offsetWidth;
+  if(show){arc.classList.add('draw');$('fblabel').classList.add('on');}
+  else{arc.classList.add('fade');$('fblabel').classList.remove('on');}
+}
+function log(txt,cls){const d=document.createElement('div');d.textContent=txt;if(cls)d.className=cls;$('log').appendChild(d);$('log').scrollTop=$('log').scrollHeight;}
+function note(t,bad){$('phase-note').innerHTML=t;$('phase-note').classList.toggle('bad',!!bad);}
+function wait(){const s=+$('spd').value;return new Promise(r=>setTimeout(r,[1200,750,380][s-1]));}
+function bump(k){
+  budg+=k;
+  const v=$('budg');v.textContent=budg;
+  v.parentElement.classList.remove('tick');void v.parentElement.offsetWidth;v.parentElement.classList.add('tick');
+  $('budgbar').style.width=Math.min(100,budg/60*100)+'%';
+  $('budgbar').style.background=budg>48?'var(--fail)':budg>36?'var(--warn)':'var(--acc)';
+  $('budg-meter').classList.toggle('hot',budg>36);
+}
+
+const scenarios={
+happy:{goal:'goal: make test_auth.py pass',max:5,runs:[
+ {plan:'read failing test, inspect auth.py',act:'edit auth.py — add token expiry check',obs:'pytest → 1 failed: expired token accepted',fail:'assert 401, got 200',fb:'expiry compared in wrong timezone'},
+ {plan:'trace shows tz mismatch — normalize to UTC',act:'edit auth.py — use datetime.utcnow()',obs:'pytest → 1 failed: boundary clock skew',fail:'assert 401 at expiry boundary, got 200',fb:'need leeway window on decode'},
+ {plan:'add 30s leeway per failure trace',act:'edit auth.py — decode(..., leeway=30)',obs:'pytest → 4 passed in 0.62s',fail:null}],
+ end:'verified'},
+breaker:{goal:'goal: fix flaky integration test',max:4,runs:[
+ {plan:'rerun to reproduce flake',act:'run test 5x',obs:'2/5 failed — race in setup fixture',fail:'nondeterministic failure',fb:'suspect shared db state'},
+ {plan:'isolate db per test',act:'edit conftest — fresh schema per test',obs:'1/5 failed — still flaky',fail:'race persists',fb:'suspect async teardown'},
+ {plan:'await teardown explicitly',act:'edit fixture — add await cleanup()',obs:'1/5 failed',fail:'race persists',fb:'root cause not in test code?'},
+ {plan:'retry same hypothesis space',act:'edit fixture — reorder teardown',obs:'1/5 failed',fail:'no progress across 2 iterations',fb:null}],
+ end:'breaker'},
+false:{goal:'goal: refactor payments module (verify gate REMOVED)',max:5,runs:[
+ {plan:'restructure payments into service layer',act:'move 6 functions, update imports',obs:'agent self-assessment: "refactor complete, code looks correct"',fail:null}],
+ end:'unverified'}
+};
+
+async function runLoop(){
+ if(running)return;running=true;$('runbtn').disabled=true;
+ resetState();
+ const sc=scenarios[$('scenario').value];
+ $('goal-line').textContent=sc.goal;$('itermax').textContent=sc.max;
+ log(sc.goal,'dim');await wait();
+ for(const r of sc.runs){
+  iter++;$('iter').textContent=iter;
+  feedbackArc(false);
+  await goStage('reason');note('<b>Reason</b> — the model plans its next move using everything in context, including prior failures.');
+  log('['+iter+'] reason: '+r.plan);bump(6);await wait();
+  await goStage('act');note('<b>Act</b> — a tool call with real side effects: edit a file, run a command, hit an API.');
+  log('['+iter+'] act: '+r.act);bump(4);await wait();
+  await goStage('observe');note('<b>Observe</b> — capture what actually happened. No observation, no learning.');
+  log('['+iter+'] observe: '+r.obs);bump(3);await wait();
+  if(sc.end==='unverified'&&!r.fail){
+    await goStage('verify','failed');
+    log('['+iter+'] verify: SKIPPED — trusting agent self-report','warn');
+    log('    reality: 2 payment paths now throw at runtime. Nobody knows yet.','fail');
+    $('term-val').textContent='"done" (unverified)';$('term-val').className='tripped blink';
+    note('<b>This is the failure mode.</b> The agent declared victory and nothing checked it. External validation — tests, compilers, assertions — is non-negotiable. Rule 01 exists because of this run.',true);
+    break;
+  }
+  if(r.fail){
+    await goStage('verify','failed');
+    log('['+iter+'] verify ✗ '+r.fail,'fail');
+    if(r.fb){
+      feedbackArc(true);
+      log('    ↩ back into context: '+r.fb,'dim');
+      note('<b>Verify failed</b> — and that\'s fine. Watch the red arc: the trace loops back into context. Iteration '+(iter+1)+' starts smarter.',true);
+    }
+    await wait();await wait();
+    if(sc.end==='breaker'&&iter===sc.max){
+      log('CIRCUIT BREAKER: no progress in 2 iterations at 80% budget — halting, escalating to human','warn');
+      $('term-val').textContent='breaker tripped';$('term-val').className='tripped blink';
+      note('<b>Breaker tripped.</b> The loop detected it was spinning — no progress, budget burning — and stopped itself before turning into a bill. Stopping well is a designed behavior, not a failure.',true);
+      mark(null);$('runner').style.opacity=0;$('trail1').style.opacity=0;$('trail2').style.opacity=0;
+      feedbackArc(false);
+    }
+  } else {
+    await goStage('verify','passed');
+    log('['+iter+'] verify ✓ external check passed','pass');await wait();
+    mark('done','passed');
+    $('runner').style.opacity=0;$('trail1').style.opacity=0;$('trail2').style.opacity=0;
+    $('donering').classList.add('win');
+    log('terminated: goal met after '+iter+' iterations, '+budg+'k tokens','dim');
+    $('term-val').textContent='goal met';$('term-val').className='ok';
+    note('<b>Done — by external proof, not self-report.</b> Tests green, under budget, within iteration cap. That triple condition is a well-engineered loop.');
+  }
+ }
+ running=false;$('runbtn').disabled=false;
+}
+function resetState(){
+  iter=0;budg=0;runnerAngle=-90;
+  $('iter').textContent='0';$('budg').textContent='0';
+  $('budgbar').style.width='0%';$('budg-meter').classList.remove('hot');
+  $('term-val').textContent='running…';$('term-val').className='';
+  $('log').innerHTML='';mark(null);
+  $('runner').style.opacity=0;$('trail1').style.opacity=0;$('trail2').style.opacity=0;
+  $('donering').classList.remove('win');
+  $('fbarc').classList.remove('draw','fade');$('fblabel').classList.remove('on');
+  placeRunner(-90);
+  $('phase-note').classList.remove('bad');
+}
+function resetLoop(){
+  if(running)return;
+  resetState();
+  $('term-val').textContent='idle';
+  const sc=scenarios[$('scenario').value];
+  $('goal-line').textContent=sc.goal;$('itermax').textContent=sc.max;
+  note('Press <b>Run loop</b>. Watch what happens when verify fails: the failure doesn\'t end the run — it becomes input.');
+}
+</script>
+</body>
+</html>

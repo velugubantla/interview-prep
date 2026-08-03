@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fan-out on write vs read</title>
+<style>
+/* ── Shell added to make this Claude artifact fragment standalone. Original content untouched below. ── */
+:root{
+  --paper:#FBFAF6; --surface-1:#FFFFFF;
+  --border:#C3CFD8; --border-strong:#8A9099;
+  --text-primary:#16181C; --text-secondary:#5A6068; --text-muted:#8A9099;
+  --bg-accent:#E8F0F6; --text-accent:#1F4E79; --border-accent:#1F4E79;
+  --fill-accent:#1F4E79; --on-accent:#FFFFFF;
+  --bg-warning:#FBF1DC; --text-warning:#9A6A05; --border-warning:#9A6A05;
+  --bg-success:#E6F1EA; --text-success:#2C6E49; --border-success:#2C6E49;
+  --bg-danger:#F7E9E7; --text-danger:#9B3226;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12151A; --surface-1:#171B21;
+    --border:#2A333D; --border-strong:#6C747D;
+    --text-primary:#E8EAED; --text-secondary:#9BA3AC; --text-muted:#6C747D;
+    --bg-accent:#16232F; --text-accent:#79ACD6; --border-accent:#79ACD6;
+    --fill-accent:#79ACD6; --on-accent:#12151A;
+    --bg-warning:#241D0F; --text-warning:#D9A441; --border-warning:#D9A441;
+    --bg-success:#122019; --text-success:#7FBF9A; --border-success:#7FBF9A;
+    --bg-danger:#241512; --text-danger:#D98A7E;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text-primary);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.6}
+.shell-wrap{max-width:880px;margin:0 auto;padding:36px 22px 72px}
+.shell-head{border-bottom:2px solid var(--text-primary);padding-bottom:14px;margin-bottom:8px}
+.shell-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.shell-head h1{font-family:var(--font-mono);font-size:24px;font-weight:600;margin:6px 0 4px;letter-spacing:-.02em}
+.shell-head p{color:var(--text-secondary);font-size:14px;margin:0}
+.shell-back{display:inline-block;margin-bottom:18px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);text-decoration:none}
+.shell-back:hover{color:var(--text-accent)}
+</style>
+</head>
+<body>
+<div class="shell-wrap">
+<a class="shell-back" href="../index.html">&larr; Interview Prep home</a>
+<div class="shell-head">
+  <div class="shell-eyebrow">System design / interactive</div>
+  <h1>Fan-out on write vs read</h1>
+  <p>The most-asked tradeoff. The crossover falls out of the read:write ratio and follower count.</p>
+</div><style>
+.sl2{display:grid;grid-template-columns:158px 1fr 96px;align-items:center;gap:12px;margin-bottom:9px}
+.sl2 label{font-size:13px;color:var(--text-secondary)}
+.sl2 .v{font-size:13px;font-family:var(--font-mono);text-align:right}
+.strat{border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;transition:border-color .25s,background .25s}
+.strat.win{border:2px solid var(--border-accent);background:var(--bg-accent)}
+.strat h3{font-size:15px;font-weight:500;margin:0 0 2px}
+.strat .sd{font-size:12px;color:var(--text-secondary);margin-bottom:12px}
+.ln{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.ln span:last-child{font-family:var(--font-mono)}
+.tb{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin:2px 0 10px}
+.tb i{display:block;height:100%;background:var(--text-secondary);transition:width .35s}
+.strat.win .tb i{background:var(--text-accent)}
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Interactive comparison of fan-out on write versus fan-out on read for a social feed, showing how follower count and read to write ratio determine which strategy costs less total work.</h2>
+<div style="margin:1rem 0 1.25rem">
+<div class="sl2"><label>Daily active users</label><input type="range" id="q1" min="5" max="9" step="1" value="8"><span class="v" id="w1"></span></div>
+<div class="sl2"><label>Followers per user</label><input type="range" id="q2" min="1" max="5" step="1" value="3"><span class="v" id="w2"></span></div>
+<div class="sl2"><label>Posts per user per day</label><input type="range" id="q3" min="1" max="20" step="1" value="2"><span class="v" id="w3"></span></div>
+<div class="sl2"><label>Feed loads per user per day</label><input type="range" id="q4" min="1" max="50" step="1" value="20"><span class="v" id="w4"></span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+<div class="strat" id="sa">
+<h3>Fan-out on write</h3><div class="sd">Push each post into every follower's feed at publish time</div>
+<div class="ln"><span>Write path ops/s</span><span id="aw"></span></div><div class="tb"><i id="awb"></i></div>
+<div class="ln"><span>Read path ops/s</span><span id="ar"></span></div><div class="tb"><i id="arb"></i></div>
+<div class="ln" style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:2px"><span>Total ops/s</span><span id="at"></span></div>
+</div>
+<div class="strat" id="sb">
+<h3>Fan-out on read</h3><div class="sd">Store the post once, merge followee timelines at read time</div>
+<div class="ln"><span>Write path ops/s</span><span id="bw"></span></div><div class="tb"><i id="bwb"></i></div>
+<div class="ln"><span>Read path ops/s</span><span id="br"></span></div><div class="tb"><i id="brb"></i></div>
+<div class="ln" style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:2px"><span>Total ops/s</span><span id="bt"></span></div>
+</div>
+</div>
+<div style="background:var(--surface-1);border-radius:var(--radius);padding:13px 16px;margin-top:12px">
+<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">Crossover</div>
+<div id="vv" style="font-size:14px;line-height:1.6"></div></div>
+<script>
+const U={5:['100 K',1e5],6:['1 M',1e6],7:['10 M',1e7],8:['100 M',1e8],9:['1 B',1e9]};
+const F={1:['50',50],2:['200',200],3:['1 K',1000],4:['10 K',10000],5:['100 K (celebrity)',100000]};
+const e=i=>document.getElementById(i);
+function ff(n){const s=['','K','M','G','T'];let i=0;while(Math.abs(n)>=1000&&i<4){n/=1000;i++}return (n>=100?Math.round(n):Number(n.toFixed(1))).toLocaleString()+' '+s[i];}
+function run(){
+const u=U[q1.value],fo=F[q2.value],p=+q3.value,l=+q4.value;
+w1.textContent=u[0];w2.textContent=fo[0];w3.textContent=p;w4.textContent=l;
+const ps=u[1]*p/86400, ls=u[1]*l/86400;
+const aw=ps*fo[1], ar=ls, at=aw+ar;
+const bw=ps, br=ls*fo[1], bt=bw+br;
+const mx=Math.max(at,bt);
+e('aw').textContent=ff(aw);e('ar').textContent=ff(ar);e('at').textContent=ff(at);
+e('bw').textContent=ff(bw);e('br').textContent=ff(br);e('bt').textContent=ff(bt);
+e('awb').style.width=(aw/mx*100)+'%';e('arb').style.width=(ar/mx*100)+'%';
+e('bwb').style.width=(bw/mx*100)+'%';e('brb').style.width=(br/mx*100)+'%';
+e('sa').classList.toggle('win',at<=bt);e('sb').classList.toggle('win',bt<at);
+let v;
+if(fo[1]>=100000)v='Celebrity regime. Fan-out on write means one post triggers '+ff(fo[1])+' writes, which is a thundering write storm and a latency spike on publish. The real answer is hybrid: precompute feeds for normal accounts, pull celebrity posts at read time and merge. Say "hybrid" and name the follower threshold that switches the strategy.';
+else if(at<bt)v='Fan-out on write wins here by '+ff(bt-at)+' ops/s. Reads outnumber writes enough that precomputing the feed pays for itself. The cost you accept is write amplification and stale feeds during backfill.';
+else v='Fan-out on read wins here by '+ff(at-bt)+' ops/s. Writes are frequent relative to reads, so materializing feeds would be wasted work most of it never read. The cost you accept is read latency proportional to followee count.';
+e('vv').textContent=v;}
+[q1,q2,q3,q4].forEach(x=>x.oninput=run);run();
+</script>
+</div>
+</body>
+</html>
