@@ -71,7 +71,7 @@ footer code{font-family:var(--mono);font-size:.9em;background:var(--blue-wash);p
 <div id="root"></div>
 
 <footer>
-  <b>Adding pages:</b> drop the file into the matching category folder (<code>sql\</code>, <code>system-design\</code>, <code>low-level-design\</code>, <code>ai-agents\</code> — or a new folder for a new category), then ask Claude to add it to the list in this file, or add one line to the <code>CATEGORIES</code> array yourself. Future sections planned: Behavioral, Data Structures, Algorithms, Graphs.
+  <b>Adding pages:</b> drop the file into the matching category folder (<code>sql\</code>, <code>system-design\</code>, <code>low-level-design\</code>, <code>ai-agents\</code>, <code>enterprise-architecture\</code> — or a new folder for a new category), then ask Claude to add it to the list in this file, or add one line to the <code>CATEGORIES</code> array yourself. Future sections planned: Behavioral, Data Structures, Algorithms, Graphs.
 </footer>
 
 </div>
@@ -115,6 +115,10 @@ const CATEGORIES = [
 
   { name: "AI & Agents", items: [
     { title: "Loop engineering simulator", file: "ai-agents/loop-engineering-simulator.html", desc: "The agent loop running live — verify, terminate, recover, govern. Three scenarios including the breaker trip.", kind: "interactive" },
+  ]},
+
+  { name: "Enterprise Architecture", items: [
+    { title: "TOGAF Foundation — visual reference", file: "enterprise-architecture/togaf-visual-reference.html", desc: "Ten sheets built around where the exam sets traps: the ADM spine, deliverable ownership by phase, the four boundaries, look-alike terms, continuum, repository, compliance ladder.", kind: "reference" },
   ]},
 
   /* Question banks per role — future role banks (e.g. Behavioral, Analytics Engineer) get one line each here. */

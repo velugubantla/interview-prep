@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOGAF Foundation — visual reference</title>
+<style>
+  :root {
+    --ground: #17202B;
+    --panel: #1E2937;
+    --lift: #253243;
+    --rule: #33445A;
+    --ink: #E6EAEF;
+    --muted: #8A99AC;
+    --brass: #C9A227;
+    --brass-dim: #6B571A;
+    --green: #5B9E76;
+    --red: #CE6A63;
+    --blue: #6E93C4;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--ground); }
+  body {
+    color: var(--ink); font-family: var(--sans); line-height: 1.5;
+    padding: 24px 14px 56px; max-width: 760px; margin: 0 auto;
+  }
+  h1 { font-family: var(--serif); font-size: 27px; font-weight: 400; margin: 0 0 4px; }
+  .lede { color: var(--muted); font-size: 14px; margin: 0 0 30px; }
+
+  section { margin-bottom: 44px; }
+  section > h2 {
+    font-family: var(--serif); font-size: 21px; font-weight: 400;
+    margin: 0 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+  }
+  .hint { color: var(--muted); font-size: 13.5px; margin: 8px 0 16px; }
+
+  /* ---------- 1. phase spine ---------- */
+  .spine { border-left: 2px solid var(--rule); margin-left: 12px; }
+  .ph { position: relative; padding: 0 0 18px 22px; }
+  .ph::before {
+    content: ""; position: absolute; left: -7px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--brass); border: 2px solid var(--ground);
+  }
+  .ph.rm::before { background: var(--blue); }
+  .ph .id {
+    font-family: var(--serif); font-size: 16px; color: var(--brass);
+    display: inline-block; margin-right: 8px;
+  }
+  .ph .nm { font-size: 15.5px; font-weight: 600; }
+  .ph .vb { color: var(--muted); font-size: 14px; margin: 3px 0 0; }
+  .ph .out { font-size: 13.5px; color: var(--green); margin-top: 3px; }
+
+  .mnem {
+    background: var(--panel); border: 1px solid var(--rule);
+    padding: 14px 16px; margin-top: 14px;
+  }
+  .mnem p { margin: 0; font-size: 14.5px; }
+  .mnem .big {
+    font-family: var(--serif); font-size: 17px; color: var(--brass);
+    margin-bottom: 8px; line-height: 1.4;
+  }
+  .mnem .big b { color: var(--ink); }
+
+  /* ---------- 2. deliverable timeline ---------- */
+  .gantt { font-size: 12px; }
+  .grow {
+    display: grid; grid-template-columns: 118px repeat(9, 1fr);
+    align-items: center; gap: 2px; margin-bottom: 3px;
+  }
+  .ghead { color: var(--muted); font-size: 10.5px; margin-bottom: 5px; }
+  .ghead div { text-align: center; }
+  .ghead div:first-child { text-align: left; }
+  .glabel {
+    font-size: 11.5px; line-height: 1.25; color: var(--ink);
+    padding-right: 6px; text-align: left;
+  }
+  .cell { height: 17px; background: var(--panel); border-radius: 1px; }
+  .cell.on { background: var(--brass-dim); }
+  .cell.start { background: var(--brass); }
+  .cell.end { background: var(--green); }
+  .glegend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+  .glegend span { display: flex; align-items: center; gap: 6px; }
+  .sw { width: 13px; height: 13px; border-radius: 1px; display: inline-block; }
+
+  /* ---------- 3. boundaries ---------- */
+  .bnd { border: 1px solid var(--rule); padding: 14px 16px; margin-bottom: 10px; }
+  .bnd .pair { font-family: var(--serif); font-size: 17px; color: var(--brass); margin-bottom: 7px; }
+  .bnd .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13.5px; }
+  .bnd .split div b { display: block; color: var(--muted); font-size: 11.5px; font-weight: 600; margin-bottom: 3px; }
+
+  /* ---------- 4. confusable pairs ---------- */
+  .vs { border: 1px solid var(--rule); margin-bottom: 10px; }
+  .vs .top {
+    background: var(--panel); padding: 9px 14px; font-family: var(--serif);
+    font-size: 15.5px; border-bottom: 1px solid var(--rule);
+  }
+  .vs .cols { display: grid; }
+  .vs .cols.two { grid-template-columns: 1fr 1fr; }
+  .vs .cols.three { grid-template-columns: 1fr 1fr 1fr; }
+  .vs .cols > div { padding: 12px 14px; font-size: 13.5px; }
+  .vs .cols > div + div { border-left: 1px solid var(--rule); }
+  .vs .cols b { display: block; color: var(--brass); font-size: 13px; margin-bottom: 4px; }
+
+  /* ---------- 5. continuum ---------- */
+  .cont { border: 1px solid var(--rule); padding: 16px 14px; }
+  .cbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 4px; }
+  .cbar div {
+    padding: 11px 7px; text-align: center; font-size: 12px;
+    color: #17202B; font-weight: 600; line-height: 1.25;
+  }
+  .c1 { background: #4A5C74; color: var(--ink) !important; }
+  .c2 { background: #6B7E96; color: var(--ink) !important; }
+  .c3 { background: #9AA3AC; }
+  .c4 { background: var(--brass); }
+  .caption { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-bottom: 16px; }
+  .clabel { font-size: 12.5px; color: var(--brass); margin-bottom: 6px; }
+  .cnote { font-size: 13.5px; color: var(--muted); margin-top: 14px; line-height: 1.55; }
+
+  /* ---------- 6. repository ---------- */
+  .repo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .repo div { border: 1px solid var(--rule); padding: 12px 13px; font-size: 13px; }
+  .repo b { display: block; color: var(--brass); font-size: 13.5px; margin-bottom: 4px; font-family: var(--serif); }
+
+  /* ---------- 7. landscape ---------- */
+  .land div {
+    padding: 13px 15px; margin-bottom: 5px; border-left: 3px solid var(--brass);
+    background: var(--panel); font-size: 13.5px;
+  }
+  .land div b { display: block; font-family: var(--serif); font-size: 15.5px; margin-bottom: 3px; }
+  .land .l1 { margin-right: 0; }
+  .land .l2 { margin-right: 12%; }
+  .land .l3 { margin-right: 24%; }
+
+  /* ---------- 8. compliance ladder ---------- */
+  .lad div {
+    border: 1px solid var(--rule); border-left: 3px solid var(--rule);
+    padding: 11px 14px; margin-bottom: 4px; font-size: 13.5px;
+  }
+  .lad b { font-family: var(--serif); font-size: 15px; }
+  .lad .g { border-left-color: var(--green); }
+  .lad .g b { color: var(--green); }
+  .lad .a { border-left-color: var(--brass); }
+  .lad .a b { color: var(--brass); }
+  .lad .r { border-left-color: var(--red); }
+  .lad .r b { color: var(--red); }
+
+  /* ---------- 9. techniques ---------- */
+  .tech { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .tech div { border: 1px solid var(--rule); padding: 11px 14px; font-size: 13.5px; }
+  .tech b { color: var(--ink); font-weight: 600; }
+  .tech i { font-style: normal; color: var(--brass); font-size: 12px; float: right; }
+
+  /* ---------- 10. principle ---------- */
+  .prin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .prin div { background: var(--panel); border-top: 3px solid var(--brass); padding: 12px 10px; font-size: 12px; }
+  .prin b { display: block; font-family: var(--serif); font-size: 14.5px; margin-bottom: 5px; }
+
+  @media (max-width: 560px) {
+    .repo, .bnd .split { grid-template-columns: 1fr; }
+    .vs .cols.three, .vs .cols.two { grid-template-columns: 1fr; }
+    .vs .cols > div + div { border-left: none; border-top: 1px solid var(--rule); }
+    .prin { grid-template-columns: 1fr 1fr; }
+    .grow { grid-template-columns: 92px repeat(9, 1fr); }
+    .glabel { font-size: 10.5px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>TOGAF Foundation &mdash; visual reference</h1>
+<p class="lede">Ten sheets. Built around where the exam actually sets traps.</p>
+
+<!-- 1 -->
+<section>
+  <h2>The spine</h2>
+  <p class="hint">Every phase in one verb, plus the deliverable it owns outright.</p>
+  <div class="spine">
+    <div class="ph"><span class="id">Prelim</span><span class="nm">Preliminary</span>
+      <p class="vb">Prepare &mdash; build the architecture capability itself</p>
+      <p class="out">Owns: Tailored Framework, Principles, Organizational Model</p></div>
+    <div class="ph"><span class="id">A</span><span class="nm">Architecture Vision</span>
+      <p class="vb">Scope &mdash; who cares, what's in, get permission</p>
+      <p class="out">Owns: Architecture Vision, Statement of Architecture Work</p></div>
+    <div class="ph"><span class="id">B</span><span class="nm">Business Architecture</span>
+      <p class="vb">Describe the business &mdash; capabilities, value streams, org map</p>
+      <p class="out">Owns: Business Architecture + its gaps</p></div>
+    <div class="ph"><span class="id">C</span><span class="nm">Information Systems Architectures</span>
+      <p class="vb">Describe data and applications &mdash; one phase, two domains</p>
+      <p class="out">Owns: Data Architecture, Application Architecture</p></div>
+    <div class="ph"><span class="id">D</span><span class="nm">Technology Architecture</span>
+      <p class="vb">Describe the platform that carries B and C</p>
+      <p class="out">Owns: Technology Architecture + its gaps</p></div>
+    <div class="ph"><span class="id">E</span><span class="nm">Opportunities and Solutions</span>
+      <p class="vb">Package &mdash; gaps become work packages and increments</p>
+      <p class="out">Owns: Transition Architectures, consolidated Roadmap</p></div>
+    <div class="ph"><span class="id">F</span><span class="nm">Migration Planning</span>
+      <p class="vb">Sequence and cost &mdash; when, in what order, for how much</p>
+      <p class="out">Owns: Implementation and Migration Plan</p></div>
+    <div class="ph"><span class="id">G</span><span class="nm">Implementation Governance</span>
+      <p class="vb">Enforce &mdash; watch delivery, check conformance</p>
+      <p class="out">Owns: Architecture Contract, Compliance Assessments</p></div>
+    <div class="ph"><span class="id">H</span><span class="nm">Architecture Change Management</span>
+      <p class="vb">Decide &mdash; is this maintenance, or a new cycle?</p>
+      <p class="out">Owns: Change Request triage</p></div>
+    <div class="ph rm"><span class="id">&#8226;</span><span class="nm">Requirements Management</span>
+      <p class="vb">Never stops &mdash; central, feeds every phase</p>
+      <p class="out">Stores requirements; does not dispose of them itself</p></div>
+  </div>
+  <div class="mnem">
+    <p class="big"><b>V</b>ery <b>B</b>ig <b>I</b>nformation <b>T</b>echnology <b>O</b>pportunities <b>M</b>ove <b>I</b>nto <b>C</b>hange</p>
+    <p>Vision, Business, Information systems, Technology, Opportunities, Migration, Implementation governance, Change management &mdash; Phases A through H in order. Preliminary sits before it; Requirements Management sits underneath all of it.</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section>
+  <h2>Who owns what, and for how long</h2>
+  <p class="hint">Most phase questions are ownership questions in disguise. Gold = created here. Green = finalized here.</p>
+  <div class="gantt">
+    <div class="grow ghead">
+      <div>Deliverable</div><div>P</div><div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+    </div>
+
+    <div class="grow"><div class="glabel">Request for Architecture Work</div>
+      <div class="cell start"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Principles</div>
+      <div class="cell start"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Tailored Framework</div>
+      <div class="cell start"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Vision</div>
+      <div class="cell"></div><div class="cell start"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Statement of Architecture Work</div>
+      <div class="cell"></div><div class="cell start"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Communications Plan</div>
+      <div class="cell"></div><div class="cell start"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Roadmap</div>
+      <div class="cell"></div><div class="cell start"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Definition Document</div>
+      <div class="cell"></div><div class="cell start"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Requirements Spec</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell start"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Transition Architectures</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell start"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Implementation &amp; Migration Plan</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell start"></div><div class="cell end"></div><div class="cell"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Architecture Contract</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell start"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Compliance Assessments</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell start"></div><div class="cell"></div></div>
+
+    <div class="grow"><div class="glabel">Change Requests</div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell start"></div></div>
+  </div>
+  <div class="glegend">
+    <span><i class="sw" style="background:var(--brass)"></i>Created / owned here</span>
+    <span><i class="sw" style="background:var(--brass-dim)"></i>Updated here</span>
+    <span><i class="sw" style="background:var(--green)"></i>Finalized here</span>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <h2>The four boundaries</h2>
+  <p class="hint">Learn these and most of the 14 ADM questions fall out.</p>
+
+  <div class="bnd">
+    <div class="pair">Preliminary &nbsp;|&nbsp; A</div>
+    <div class="split">
+      <div><b>Preliminary</b>Sets up the capability. Who does architecture, by what method, under what principles.</div>
+      <div><b>Phase A</b>Sets up the project. What's in scope, who the stakeholders are, and formal permission to start.</div>
+    </div>
+  </div>
+
+  <div class="bnd">
+    <div class="pair">D &nbsp;|&nbsp; E</div>
+    <div class="split">
+      <div><b>Phases B, C, D</b>Produce gaps. Each domain compares baseline to target and records what's missing.</div>
+      <div><b>Phase E</b>Consumes gaps. Consolidates them into work packages, projects and Transition Architectures.</div>
+    </div>
+  </div>
+
+  <div class="bnd">
+    <div class="pair">E &nbsp;|&nbsp; F</div>
+    <div class="split">
+      <div><b>Phase E</b>Decides <em>what</em> gets built and in what increments.</div>
+      <div><b>Phase F</b>Decides <em>when</em>, in what order, and at what cost. Cost/benefit and risk live here.</div>
+    </div>
+  </div>
+
+  <div class="bnd">
+    <div class="pair">G &nbsp;|&nbsp; H</div>
+    <div class="split">
+      <div><b>Phase G</b>Enforces the architecture on delivery. Contract signed, compliance reviewed.</div>
+      <div><b>Phase H</b>Changes the architecture itself. Triages change requests into maintenance, incremental change, or a new cycle.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section>
+  <h2>Terms that look alike</h2>
+  <p class="hint">This is the category where most marks are lost. Read the right-hand column as the discriminator.</p>
+
+  <div class="vs">
+    <div class="top">Deliverable &middot; Artifact &middot; Building Block</div>
+    <div class="cols three">
+      <div><b>Deliverable</b>Contractually specified. Formally reviewed and signed off. The output of a phase.</div>
+      <div><b>Artifact</b>A granular description of one aspect. Catalog, matrix or diagram. Usually packaged inside a deliverable.</div>
+      <div><b>Building Block</b>A reusable component of capability. Can appear in many deliverables and many architectures.</div>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="top">Architecture Building Block &middot; Solution Building Block</div>
+    <div class="cols two">
+      <div><b>ABB</b>Capability-level. Implementation-independent. Says <em>what is required</em> and shapes the SBB specification.</div>
+      <div><b>SBB</b>The actual product, component or service that <em>realizes</em> the capability. Vendor-specific.</div>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="top">View &middot; Viewpoint</div>
+    <div class="cols two">
+      <div><b>Viewpoint</b>Where you stand and what you look at. The conventions and perspective. Chosen to address a concern.</div>
+      <div><b>View</b>What you actually see from there. The representation shown to the stakeholder.</div>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="top">Architecture Definition Document &middot; Architecture Requirements Specification</div>
+    <div class="cols two">
+      <div><b>Definition Document</b>Qualitative. Narrative. Describes what the architecture <em>is</em>.</div>
+      <div><b>Requirements Specification</b>Quantitative. Measurable. States what any implementation <em>must satisfy</em>.</div>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="top">Architecture Continuum &middot; Solutions Continuum</div>
+    <div class="cols two">
+      <div><b>Architecture Continuum</b>The generic-to-specific progression of <em>architectures</em>: what should be built.</div>
+      <div><b>Solutions Continuum</b>The corresponding <em>implementations</em> at each level: what actually was built.</div>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="top">Baseline &middot; Target &middot; Transition</div>
+    <div class="cols three">
+      <div><b>Baseline</b>Where you are now.</div>
+      <div><b>Target</b>Where you're going.</div>
+      <div><b>Transition</b>A formally described state in between that delivers business value in its own right &mdash; not just a technical waypoint.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section>
+  <h2>The Enterprise Continuum</h2>
+  <p class="hint">A classification model for repository content. Not a pipeline, not a timeline, not an uptime requirement.</p>
+  <div class="cont">
+    <div class="clabel">Architecture Continuum &mdash; what should be built</div>
+    <div class="cbar">
+      <div class="c1">Foundation<br>Architectures</div>
+      <div class="c2">Common Systems<br>Architectures</div>
+      <div class="c3">Industry<br>Architectures</div>
+      <div class="c4">Organization-Specific<br>Architectures</div>
+    </div>
+    <div class="caption"><span>Most generic</span><span>Most specific</span></div>
+
+    <div class="clabel">Solutions Continuum &mdash; what was actually built</div>
+    <div class="cbar">
+      <div class="c1">Foundation<br>Solutions</div>
+      <div class="c2">Common Systems<br>Solutions</div>
+      <div class="c3">Industry<br>Solutions</div>
+      <div class="c4">Organization-Specific<br>Solutions</div>
+    </div>
+    <p class="cnote">Every level of the Architecture Continuum has a matching level in the Solutions Continuum. Content moves left-to-right as it is specialized for your enterprise, and right-to-left as your organization-specific work is generalized for reuse.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section>
+  <h2>Inside the Architecture Repository</h2>
+  <p class="hint">If an option names something not on this list, it isn't in the repository.</p>
+  <div class="repo">
+    <div><b>Architecture Metamodel</b>The tailored content framework &mdash; what kinds of things you model and how they relate.</div>
+    <div><b>Architecture Capability</b>The parameters, structures and processes of the architecture function itself.</div>
+    <div><b>Architecture Landscape</b>The architectures currently in place, at three levels of granularity.</div>
+    <div><b>Standards Information Base</b>The standards the enterprise has committed to comply with.</div>
+    <div><b>Reference Library</b>Guidelines, templates, patterns and reference models available for reuse.</div>
+    <div><b>Governance Log</b>The record of governance activity across the enterprise.</div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section>
+  <h2>Architecture Landscape &mdash; three altitudes</h2>
+  <p class="hint">Breadth decreases, detail increases, as you go down.</p>
+  <div class="land">
+    <div class="l1"><b>Strategic Architecture</b>Long-term summary view of the entire enterprise. Direction-setting. Low detail, maximum breadth.</div>
+    <div class="l2"><b>Segment Architecture</b>Detailed, formal description of a portion of the enterprise. Used to align change activity within that portion.</div>
+    <div class="l3"><b>Capability Architecture</b>Detailed view of a specific increment of capability. Narrow scope, highest detail, closest to delivery.</div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section>
+  <h2>The compliance ladder</h2>
+  <p class="hint">Read each rung as two facts: was everything in the spec built, and was anything extra built?</p>
+  <div class="lad">
+    <div class="g"><b>Fully Conformant</b> &mdash; exact correspondence. Everything in the spec built, nothing extra.</div>
+    <div class="g"><b>Conformant</b> &mdash; everything in the spec built to spec, <em>plus</em> extra features not in the spec.</div>
+    <div class="a"><b>Compliant</b> &mdash; not everything in the spec was built, but everything built follows the spec. A clean subset.</div>
+    <div class="a"><b>Consistent</b> &mdash; some spec features built to spec, some spec features missing, <em>and</em> extra features added.</div>
+    <div class="r"><b>Irrelevant</b> &mdash; no features in common with the spec at all.</div>
+    <div class="r"><b>Non-Conformant</b> &mdash; any case where something was built <em>not</em> in accordance with the spec.</div>
+  </div>
+  <p class="hint">The trap: <em>Compliant</em> sounds stronger than <em>Conformant</em> in ordinary English. In TOGAF it is weaker. Conformant means the spec was fully delivered; Compliant means only part of it was.</p>
+</section>
+
+<!-- 9 -->
+<section>
+  <h2>The techniques toolkit</h2>
+  <p class="hint">Each one exists to solve a specific problem. The exam tests what problem, not how to run it.</p>
+  <div class="tech">
+    <div><b>Architecture Principles</b> <i>Preliminary</i><br>General rules that constrain every later decision.</div>
+    <div><b>Stakeholder Management</b> <i>Phase A</i><br>Identify who matters, what they care about, and which views they need.</div>
+    <div><b>Business Scenarios</b> <i>Phase A / B</i><br>Derive requirements from a described process, its actors and its desired outcome.</div>
+    <div><b>Gap Analysis</b> <i>B, C, D, E</i><br>Find what was left out between baseline and target.</div>
+    <div><b>Architecture Patterns</b> <i>Any</i><br>Reuse a proven solution to a recurring problem in context.</div>
+    <div><b>Interoperability Requirements</b> <i>Any</i><br>Define what has to work with what, and to what degree.</div>
+    <div><b>Business Transformation Readiness</b> <i>A / E</i><br>Assess whether the organization can absorb the change at all.</div>
+    <div><b>Risk Management</b> <i>Throughout</i><br>Classify by effect and frequency, before mitigation (initial) and after (residual).</div>
+    <div><b>Capability-Based Planning</b> <i>Throughout</i><br>Plan outcomes as business capabilities, delivered horizontally across silos.</div>
+    <div><b>Migration Planning Techniques</b> <i>E / F</i><br>Sequence and prioritize work packages into a deliverable plan.</div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section>
+  <h2>Anatomy of an architecture principle</h2>
+  <p class="hint">Four parts, always. The fourth is what makes it enforceable rather than decorative.</p>
+  <div class="prin">
+    <div><b>Name</b>Memorable, and it says the rule &mdash; not the mechanism.</div>
+    <div><b>Statement</b>The rule itself, unambiguous.</div>
+    <div><b>Rationale</b>The business benefit. Why this rule exists.</div>
+    <div><b>Implications</b>What it costs and what it requires. The teeth.</div>
+  </div>
+</section>
+
+</body>
+</html>
